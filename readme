@@ -1,1 +1,1092 @@
-0
+
+/* =====================================================================
+   Farmers & Merchants Bank (Long Beach) – Synthetic Demo Data Seeder
+   Target: Microsoft SQL Server (T-SQL)
+   Scope: Regions, Branches (+phones), Employees, Customers, Households,
+          Accounts, Ownership, Categories, Transactions, Notes, Contacts
+
+   IMPORTANT
+   - For DEMO / DEV ONLY. Generates synthetic, real-like data.
+   - Safe to run multiple times: uses stable “seed codes” and avoids dupes.
+   - If you have extra CHECK constraints or triggers not shown in screenshots,
+     you may need to adjust the allowed values or required columns.
+   ===================================================================== */
+
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+BEGIN TRAN;
+
+DECLARE @Now          datetime2(7) = SYSUTCDATETIME();
+DECLARE @Today        date         = CAST(@Now AS date);
+
+-- Scale knobs
+DECLARE @HouseholdCount       int  = 140;
+DECLARE @CustomerCountTarget  int  = 320;   -- includes individuals + businesses
+DECLARE @MaxMembersPerHH      int  = 4;
+DECLARE @DaysBack             int  = 120;   -- transaction lookback
+DECLARE @TxnsPerAccount       int  = 55;    -- average-ish, set-based generator
+
+/* ---------------------------------------------------------------------
+   0) OPTIONAL CLEANUP (commented): only if DB is truly empty / disposable.
+   Delete in FK-safe order (customize to your schema & constraints).
+------------------------------------------------------------------------
+-- DELETE FROM dbo.note_audit_log;
+-- DELETE FROM dbo.note_version;
+-- DELETE FROM dbo.note;
+-- DELETE FROM dbo.contact_history;
+-- DELETE FROM dbo.entity_contact;
+-- DELETE FROM dbo.entity_address;
+-- DELETE FROM dbo.contact_info;
+-- DELETE FROM dbo.financial_transaction;
+-- DELETE FROM dbo.account_ownership;
+-- DELETE FROM dbo.account;
+-- DELETE FROM dbo.customer_officer_assignment;
+-- DELETE FROM dbo.household_membership;
+-- DELETE FROM dbo.household;
+-- DELETE FROM dbo.customer_sic_code;
+-- DELETE FROM dbo.sic_code;
+-- DELETE FROM dbo.employee_branch;
+-- DELETE FROM dbo.employee;
+-- DELETE FROM dbo.branch;
+-- DELETE FROM dbo.address;
+-- DELETE FROM dbo.region;
+------------------------------------------------------------------------ */
+
+--------------------------------------------------------------------------------
+-- 1) Regions (per FMB brochure: Long Beach, Orange County, Los Angeles County,
+--             Santa Barbara County) + codes used for deterministic mapping.
+--------------------------------------------------------------------------------
+DECLARE @RegionWanted TABLE (region_code varchar(10) NOT NULL PRIMARY KEY, region_name varchar(100) NOT NULL);
+INSERT INTO @RegionWanted(region_code, region_name)
+VALUES ('LB','Long Beach'),
+       ('OC','Orange County'),
+       ('LA','Los Angeles County'),
+       ('SBA','Santa Barbara County');
+
+INSERT INTO dbo.region (region_code, region_name, created_at, updated_at)
+SELECT w.region_code, w.region_name, @Now, @Now
+FROM @RegionWanted w
+WHERE NOT EXISTS (SELECT 1 FROM dbo.region r WHERE r.region_code = w.region_code);
+
+DECLARE @RegionMap TABLE (region_code varchar(10) NOT NULL PRIMARY KEY, region_id bigint NOT NULL);
+INSERT INTO @RegionMap(region_code, region_id)
+SELECT r.region_code, r.region_id
+FROM dbo.region r
+JOIN @RegionWanted w ON w.region_code = r.region_code;
+
+--------------------------------------------------------------------------------
+-- 2) Branch seed (addresses from user; phones from FMB brochure when available)
+--    Branch table: branch_code, branch_name required; address_id required.
+--------------------------------------------------------------------------------
+IF OBJECT_ID('tempdb..#BranchSeed') IS NOT NULL DROP TABLE #BranchSeed;
+CREATE TABLE #BranchSeed(
+  branch_code  varchar(10)  NOT NULL PRIMARY KEY,
+  branch_name  varchar(100) NOT NULL,
+  line1        varchar(200) NOT NULL,
+  line2        varchar(200) NULL,
+  city         varchar(100) NOT NULL,
+  state        varchar(2)   NOT NULL,
+  postal_code  varchar(10)  NOT NULL,
+  phone        varchar(20)  NULL,
+  region_code  varchar(10)  NOT NULL,
+  open_sat     bit          NOT NULL DEFAULT(0)
+);
+
+-- NOTE: brochure marks "*" as open Saturdays 9am–12pm; we set open_sat=1 for those.
+-- Phones below match brochure listings where present; feel free to revise if needed.
+INSERT INTO #BranchSeed(branch_code, branch_name, line1, line2, city, state, postal_code, phone, region_code, open_sat)
+VALUES
+('LB-MAIN','Main Office','302 Pine Ave.',NULL,'Long Beach','CA','90802','562-437-0011','LB',0),
+('LB-BS','Belmont Shore','4827 E. 2nd St.',NULL,'Long Beach','CA','90803','562-621-1430','LB',1),
+('LB-BK','Bixby Knolls','4545 California Ave.',NULL,'Long Beach','CA','90807','562-984-3600','LB',1),
+('OC-CDM','Corona del Mar','2421 E. Coast Hwy.',NULL,'Corona del Mar','CA','92625','949-723-1804','OC',1),
+('LA-DWY','Downey','9001 Firestone Blvd.',NULL,'Downey','CA','90241','562-334-1836','LA',1),
+('LB-ELB','East Long Beach','3140 E. Anaheim St.',NULL,'Long Beach','CA','90804','562-621-1400','LB',0),
+('OC-FULL','Fullerton','315 N. Harbor Blvd.',NULL,'Fullerton','CA','92832','714-578-1945','OC',1),
+-- User provided Garden Grove address differs from brochure; keeping phone from brochure.
+('OC-GG','Garden Grove','12966 Euclid St','Suite 150','Garden Grove','CA','92840','714-590-3880','OC',1),
+('OC-HB','Huntington Beach','7125 Yorktown Ave.',NULL,'Huntington Beach','CA','92648','714-465-3131','OC',1),
+('OC-LBCH','Laguna Beach','401 Glenneyre Street',NULL,'Laguna Beach','CA','92651','949-900-8275','OC',0),
+('OC-LH','Laguna Hills','24300 Paseo de Valencia',NULL,'Laguna Hills','CA','92653','949-340-3150','OC',1),
+('OC-LF','Lake Forest','23772 Rockfield Blvd.',NULL,'Lake Forest','CA','92630','949-460-7900','OC',1),
+('LB-LKW','Lakewood','4909 Lakewood Blvd.',NULL,'Lakewood','CA','90712','562-602-8378','LB',1),
+('LB-LA','Los Altos','2302 Bellflower Blvd.',NULL,'Long Beach','CA','90815','562-799-7271','LB',1),
+('LB-MEM','Memorial Office (1st Floor Hospital)','2801 Atlantic Ave.',NULL,'Long Beach','CA','90806','562-989-7862','LB',0),
+('OC-NB','Newport Beach','4695 MacArthur Ct.','Ste. 130','Newport Beach','CA','92660','949-241-8280','OC',0),
+('OC-OR','Orange','1220 E. Katella Ave.',NULL,'Orange','CA','92867','714-288-8450','OC',1),
+('LA-RB','Redondo Beach','1333 S. Pacific Coast Hwy.',NULL,'Redondo Beach','CA','90277','310-802-7560','LA',1),
+('LA-RHE','Rolling Hills Estates','27525 Indian Peak Rd.',NULL,'Rolling Hills Estates','CA','90274','310-491-1711','LA',1),
+('LB-ROSS','Rossmoor','12535 Seal Beach Blvd.',NULL,'Seal Beach','CA','90740','562-799-2002','LB',1),
+('OC-SC','San Clemente','621 N. El Camino Real',NULL,'San Clemente','CA','92672','949-373-2470','OC',1),
+('OC-SJC','San Juan Capistrano','31873 Del Obispo St.',NULL,'San Juan Capistrano','CA','92675','949-488-8550','OC',1),
+('OC-SA17','Santa Ana','1750 E. 17th St.',NULL,'Santa Ana','CA','92705','714-564-1750','OC',0),
+('OC-SAM','Santa Ana Main','1702 N. Main St.',NULL,'Santa Ana','CA','92706','714-888-2630','OC',0),
+('SBA-SB','Santa Barbara','33 East Carrillo St.',NULL,'Santa Barbara','CA','93101','805-280-4700','SBA',0),
+('LA-TOR','Torrance','22400 Hawthorne Blvd.',NULL,'Torrance','CA','90505','310-265-3200','LA',1),
+('OC-TUS','Tustin','2691 Park Ave.',NULL,'Tustin','CA','92782','714-824-3070','OC',1);
+
+--------------------------------------------------------------------------------
+-- 3) Insert Addresses for branches (avoid duplicates by exact match on line1+zip)
+--------------------------------------------------------------------------------
+DECLARE @BranchAddrMap TABLE (branch_code varchar(10) NOT NULL PRIMARY KEY, address_id bigint NOT NULL);
+
+INSERT INTO dbo.address (address_line1, address_line2, city, state, postal_code, country, latitude, longitude, created_at, updated_at)
+OUTPUT s.branch_code, inserted.address_id INTO @BranchAddrMap(branch_code, address_id)
+SELECT s.line1, s.line2, s.city, s.state, s.postal_code, 'USA', NULL, NULL, @Now, @Now
+FROM #BranchSeed s
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.address a
+  WHERE a.address_line1 = s.line1 AND ISNULL(a.address_line2,'') = ISNULL(s.line2,'')
+    AND a.postal_code = s.postal_code
+);
+
+-- Map any pre-existing address rows we didn't insert
+INSERT INTO @BranchAddrMap(branch_code, address_id)
+SELECT s.branch_code, a.address_id
+FROM #BranchSeed s
+JOIN dbo.address a
+  ON a.address_line1 = s.line1
+ AND ISNULL(a.address_line2,'') = ISNULL(s.line2,'')
+ AND a.postal_code = s.postal_code
+WHERE NOT EXISTS (SELECT 1 FROM @BranchAddrMap m WHERE m.branch_code = s.branch_code);
+
+--------------------------------------------------------------------------------
+-- 4) Insert Branches (avoid duplicates by branch_code)
+--------------------------------------------------------------------------------
+DECLARE @BranchMap TABLE (branch_code varchar(10) NOT NULL PRIMARY KEY, branch_id bigint NOT NULL);
+
+INSERT INTO dbo.branch (branch_code, branch_name, address_id, region_id, is_active, opened_date, created_at, updated_at)
+OUTPUT inserted.branch_code, inserted.branch_id INTO @BranchMap(branch_code, branch_id)
+SELECT s.branch_code,
+       s.branch_name,
+       am.address_id,
+       rm.region_id,
+       1,
+       DATEFROMPARTS(1990 + (ABS(CHECKSUM(NEWID())) % 25), 1 + (ABS(CHECKSUM(NEWID())) % 12), 1 + (ABS(CHECKSUM(NEWID())) % 28)),
+       @Now, @Now
+FROM #BranchSeed s
+JOIN @BranchAddrMap am ON am.branch_code = s.branch_code
+JOIN @RegionMap rm     ON rm.region_code = s.region_code
+WHERE NOT EXISTS (SELECT 1 FROM dbo.branch b WHERE b.branch_code = s.branch_code);
+
+-- Map any existing branches
+INSERT INTO @BranchMap(branch_code, branch_id)
+SELECT b.branch_code, b.branch_id
+FROM dbo.branch b
+JOIN #BranchSeed s ON s.branch_code = b.branch_code
+WHERE NOT EXISTS (SELECT 1 FROM @BranchMap m WHERE m.branch_code = b.branch_code);
+
+--------------------------------------------------------------------------------
+-- 5) Branch phone contacts: contact_info + entity_contact
+--------------------------------------------------------------------------------
+DECLARE @BranchPhoneContact TABLE (branch_code varchar(10) NOT NULL PRIMARY KEY, contact_id bigint NOT NULL);
+
+INSERT INTO dbo.contact_info (contact_type, contact_value, contact_subtype, is_primary, is_verified, verification_date, can_contact, preferred_time, created_at, updated_at)
+OUTPUT s.branch_code, inserted.contact_id INTO @BranchPhoneContact(branch_code, contact_id)
+SELECT 'phone', s.phone, 'main', 1, 1, @Now, 1, NULL, @Now, @Now
+FROM #BranchSeed s
+WHERE s.phone IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM dbo.contact_info ci
+    WHERE ci.contact_type = 'phone' AND ci.contact_value = s.phone
+  );
+
+-- Attach contacts to branches (entity_type is free-text in your screenshots)
+INSERT INTO dbo.entity_contact (entity_type, entity_id, contact_id, contact_purpose, is_current, start_date, end_date, created_at, updated_at)
+SELECT 'branch', bm.branch_id, pc.contact_id, 'main_phone', 1, @Today, NULL, @Now, @Now
+FROM @BranchPhoneContact pc
+JOIN @BranchMap bm ON bm.branch_code = pc.branch_code
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.entity_contact ec
+  WHERE ec.entity_type = 'branch' AND ec.entity_id = bm.branch_id AND ec.contact_id = pc.contact_id
+);
+
+--------------------------------------------------------------------------------
+-- 6) Seed a small employee roster + assignments (enough for demos)
+--------------------------------------------------------------------------------
+IF OBJECT_ID('tempdb..#EmployeeSeed') IS NOT NULL DROP TABLE #EmployeeSeed;
+CREATE TABLE #EmployeeSeed(
+  employee_number varchar(20) NOT NULL PRIMARY KEY,
+  first_name      varchar(100) NOT NULL,
+  last_name       varchar(100) NOT NULL,
+  title           varchar(100) NOT NULL,
+  department      varchar(100) NOT NULL,
+  officer_code    varchar(20)  NOT NULL,
+  email           varchar(255) NOT NULL,
+  phone           varchar(20)  NULL
+);
+
+INSERT INTO #EmployeeSeed(employee_number, first_name, last_name, title, department, officer_code, email, phone)
+VALUES
+('E10001','Alyssa','Ramirez','Branch Manager','Retail Banking','OF1001','alyssa.ramirez@demo.fmb.com','562-555-0101'),
+('E10002','Daniel','Nguyen','Relationship Manager','Retail Banking','OF1002','daniel.nguyen@demo.fmb.com','562-555-0102'),
+('E10003','Priya','Shah','Mortgage Loan Officer','Home Loans','OF1003','priya.shah@demo.fmb.com','562-555-0103'),
+('E10004','Marcus','Johnson','Business Banking Officer','Business Banking','OF1004','marcus.johnson@demo.fmb.com','714-555-0104'),
+('E10005','Sofia','Chen','Wealth Advisor','Wealth Management','OF1005','sofia.chen@demo.fmb.com','949-555-0105'),
+('E10006','Luis','Hernandez','Customer Service Rep','Retail Banking','OF1006','luis.hernandez@demo.fmb.com','310-555-0106'),
+('E10007','Emma','Keller','Branch Operations Lead','Operations','OF1007','emma.keller@demo.fmb.com','805-555-0107'),
+('E10008','Noah','Patel','Fraud Analyst','Risk','OF1008','noah.patel@demo.fmb.com','562-555-0108');
+
+DECLARE @EmployeeMap TABLE (officer_code varchar(20) NOT NULL PRIMARY KEY, employee_id bigint NOT NULL);
+
+INSERT INTO dbo.employee (employee_number, first_name, last_name, title, position, officer_code, department, is_active,
+                         hire_date, sso_subject, email, phone, last_seen_saml_role, last_login_at, deleted_at, modified_by,
+                         created_at, updated_at)
+OUTPUT inserted.officer_code, inserted.employee_id INTO @EmployeeMap(officer_code, employee_id)
+SELECT s.employee_number, s.first_name, s.last_name, s.title, s.title, s.officer_code, s.department, 1,
+       DATEFROMPARTS(2015 + (ABS(CHECKSUM(NEWID())) % 10), 1 + (ABS(CHECKSUM(NEWID())) % 12), 1 + (ABS(CHECKSUM(NEWID())) % 28)),
+       CONCAT('sso|', s.employee_number), s.email, s.phone, NULL, NULL, NULL, 'seed_script', @Now, @Now
+FROM #EmployeeSeed s
+WHERE NOT EXISTS (SELECT 1 FROM dbo.employee e WHERE e.officer_code = s.officer_code);
+
+-- Map any existing employees in case rerun
+INSERT INTO @EmployeeMap(officer_code, employee_id)
+SELECT e.officer_code, e.employee_id
+FROM dbo.employee e
+JOIN #EmployeeSeed s ON s.officer_code = e.officer_code
+WHERE NOT EXISTS (SELECT 1 FROM @EmployeeMap m WHERE m.officer_code = e.officer_code);
+
+-- Employee -> Branch assignment (lightweight, primary branch + a couple shared)
+INSERT INTO dbo.employee_branch (employee_id, branch_id, assignment_role, is_primary, start_date, end_date, is_active, created_at, updated_at)
+SELECT em.employee_id, bm.branch_id,
+       CASE WHEN es.department='Wealth Management' THEN 'Wealth'
+            WHEN es.department='Home Loans' THEN 'Lending'
+            WHEN es.department='Business Banking' THEN 'Business'
+            WHEN es.department='Risk' THEN 'Risk'
+            ELSE 'Retail' END,
+       CASE WHEN bm.branch_code IN ('LB-MAIN','OC-NB','LA-TOR','SBA-SB') THEN 1 ELSE 0 END,
+       @Today, NULL, 1, @Now, @Now
+FROM @EmployeeMap em
+JOIN #EmployeeSeed es ON es.officer_code = em.officer_code
+JOIN @BranchMap bm ON bm.branch_code IN ('LB-MAIN','OC-NB','LA-TOR','SBA-SB')
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.employee_branch eb
+  WHERE eb.employee_id = em.employee_id AND eb.branch_id = bm.branch_id
+);
+
+--------------------------------------------------------------------------------
+-- 7) Transaction categories
+--------------------------------------------------------------------------------
+DECLARE @TxnCat TABLE(name varchar(100) NOT NULL PRIMARY KEY);
+INSERT INTO @TxnCat(name)
+VALUES ('Payroll'),
+       ('ATM Withdrawal'),
+       ('Debit Card Purchase'),
+       ('ACH Credit'),
+       ('ACH Debit'),
+       ('Wire Transfer'),
+       ('Mobile Deposit'),
+       ('Check'),
+       ('Cash Deposit'),
+       ('Loan Payment'),
+       ('Credit Card Payment'),
+       ('Interest'),
+       ('Service Fee'),
+       ('Internal Transfer');
+
+INSERT INTO dbo.transaction_category (name, parent_id, group_code, created_at, updated_at)
+SELECT c.name, NULL, NULL, @Now, @Now
+FROM @TxnCat c
+WHERE NOT EXISTS (SELECT 1 FROM dbo.transaction_category tc WHERE tc.name = c.name);
+
+DECLARE @TxnCatMap TABLE(name varchar(100) PRIMARY KEY, category_id bigint NOT NULL);
+INSERT INTO @TxnCatMap(name, category_id)
+SELECT tc.name, tc.category_id
+FROM dbo.transaction_category tc
+JOIN @TxnCat c ON c.name = tc.name;
+
+--------------------------------------------------------------------------------
+-- 8) SIC codes (small subset for realism)
+--------------------------------------------------------------------------------
+IF NOT EXISTS (SELECT 1 FROM dbo.sic_code WHERE sic_code IN (5411,5541,5812,5912,7011,7372,7399,1521,6021,5734,5999))
+BEGIN
+  INSERT INTO dbo.sic_code (sic_code, description, is_active, created_at, updated_at)
+  VALUES
+   (5411,'Grocery Stores',1,@Now,@Now),
+   (5541,'Gasoline Service Stations',1,@Now,@Now),
+   (5812,'Eating Places',1,@Now,@Now),
+   (5912,'Drug Stores and Proprietary Stores',1,@Now,@Now),
+   (7011,'Hotels and Motels',1,@Now,@Now),
+   (7372,'Prepackaged Software',1,@Now,@Now),
+   (7399,'Business Services, Not Elsewhere Classified',1,@Now,@Now),
+   (1521,'General Contractors—Single-Family Houses',1,@Now,@Now),
+   (6021,'National Commercial Banks',1,@Now,@Now),
+   (5734,'Computer and Computer Software Stores',1,@Now,@Now),
+   (5999,'Miscellaneous Retail Stores, NEC',1,@Now,@Now);
+END
+
+--------------------------------------------------------------------------------
+-- 9) Note categories
+--------------------------------------------------------------------------------
+DECLARE @NoteCat TABLE(category_name varchar(100) PRIMARY KEY);
+INSERT INTO @NoteCat(category_name)
+VALUES ('KYC / Profile'),
+       ('Service'),
+       ('Lending'),
+       ('Wealth'),
+       ('Fraud / Risk'),
+       ('Follow-up'),
+       ('General');
+
+INSERT INTO dbo.note_category (category_name, parent_category_id, description, color_code, is_active, display_order, created_at, updated_at)
+SELECT nc.category_name, NULL, NULL, NULL, 1, 10, @Now, @Now
+FROM @NoteCat nc
+WHERE NOT EXISTS (SELECT 1 FROM dbo.note_category x WHERE x.category_name = nc.category_name);
+
+DECLARE @NoteCatMap TABLE(category_name varchar(100) PRIMARY KEY, category_id bigint NOT NULL);
+INSERT INTO @NoteCatMap(category_name, category_id)
+SELECT x.category_name, x.category_id
+FROM dbo.note_category x
+JOIN @NoteCat nc ON nc.category_name = x.category_name;
+
+--------------------------------------------------------------------------------
+-- 10) Customers, households, memberships
+--     Customer: only customer_type is NOT NULL per your screenshot.
+--     Household: household_name is NOT NULL.
+--     Household_membership: household_id, customer_id, relationship_role,
+--                          ownership_percentage are NOT NULL.
+--------------------------------------------------------------------------------
+-- Name pools (realistic, but synthetic)
+IF OBJECT_ID('tempdb..#FirstNames') IS NOT NULL DROP TABLE #FirstNames;
+IF OBJECT_ID('tempdb..#LastNames')  IS NOT NULL DROP TABLE #LastNames;
+
+CREATE TABLE #FirstNames(name varchar(50) NOT NULL);
+CREATE TABLE #LastNames(name  varchar(50) NOT NULL);
+
+INSERT INTO #FirstNames(name) VALUES
+('Michael'),('Jessica'),('David'),('Ashley'),('Christopher'),('Amanda'),('Matthew'),('Brianna'),
+('Daniel'),('Samantha'),('Andrew'),('Lauren'),('James'),('Emily'),('Ryan'),('Hannah'),
+('Joshua'),('Kayla'),('Kevin'),('Stephanie'),('Anthony'),('Victoria'),('Brandon'),('Rachel'),
+('Justin'),('Megan'),('Jonathan'),('Nicole'),('Jose'),('Maria'),('Luis'),('Sofia'),
+('Diego'),('Valeria'),('Noah'),('Ava'),('Ethan'),('Mia'),('Lucas'),('Isabella'),
+('Arjun'),('Priya'),('Ravi'),('Anika'),('Wei'),('Mei'),('Min'),('Jin');
+
+INSERT INTO #LastNames(name) VALUES
+('Garcia'),('Martinez'),('Rodriguez'),('Hernandez'),('Lopez'),('Gonzalez'),('Wilson'),('Anderson'),
+('Thomas'),('Taylor'),('Moore'),('Jackson'),('Martin'),('Lee'),('Perez'),('Thompson'),
+('White'),('Harris'),('Sanchez'),('Clark'),('Ramirez'),('Lewis'),('Robinson'),('Walker'),
+('Young'),('Allen'),('King'),('Wright'),('Scott'),('Torres'),('Nguyen'),('Hill'),
+('Flores'),('Green'),('Adams'),('Nelson'),('Baker'),('Hall'),('Rivera'),('Campbell'),
+('Mitchell'),('Carter'),('Roberts'),('Gomez'),('Phillips'),('Evans'),('Turner'),('Diaz');
+
+-- Households
+DECLARE @HouseholdMap TABLE(seed_hh int PRIMARY KEY, household_id bigint NOT NULL);
+
+;WITH n AS (
+  SELECT TOP (@HouseholdCount) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS rn
+  FROM sys.all_objects
+)
+INSERT INTO dbo.household (household_name, household_type, total_assets, total_liabilities, relationship_manager_id,
+                           established_date, tax_filing_status, parent_household_id, consolidation_method,
+                           created_at, updated_at)
+OUTPUT n.rn, inserted.household_id INTO @HouseholdMap(seed_hh, household_id)
+SELECT CONCAT('Household ', FORMAT(n.rn,'000')),
+       CASE WHEN n.rn % 10 = 0 THEN 'trust' WHEN n.rn % 7 = 0 THEN 'business_owner' ELSE 'family' END,
+       CAST( 25000 + (ABS(CHECKSUM(NEWID())) % 2500000) AS decimal(15,2)),
+       CAST( (ABS(CHECKSUM(NEWID())) % 900000) AS decimal(15,2)),
+       (SELECT TOP 1 employee_id FROM @EmployeeMap ORDER BY NEWID()),
+       DATEFROMPARTS(2000 + (ABS(CHECKSUM(NEWID())) % 24), 1 + (ABS(CHECKSUM(NEWID())) % 12), 1 + (ABS(CHECKSUM(NEWID())) % 28)),
+       CASE WHEN n.rn % 4 = 0 THEN 'married_joint' WHEN n.rn % 3 = 0 THEN 'single' ELSE 'head_of_household' END,
+       NULL,
+       CASE WHEN n.rn % 6 = 0 THEN 'aggregate' ELSE 'none' END,
+       @Now, @Now
+FROM n
+WHERE NOT EXISTS (SELECT 1 FROM dbo.household h WHERE h.household_name = CONCAT('Household ', FORMAT(n.rn,'000')));
+
+-- Map existing households if rerun
+INSERT INTO @HouseholdMap(seed_hh, household_id)
+SELECT CAST(REPLACE(h.household_name,'Household ','') AS int) AS seed_hh, h.household_id
+FROM dbo.household h
+WHERE h.household_name LIKE 'Household %'
+  AND TRY_CAST(REPLACE(h.household_name,'Household ','') AS int) IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM @HouseholdMap m WHERE m.household_id = h.household_id);
+
+-- Customers (individual + business)
+IF OBJECT_ID('tempdb..#CustomerSeed') IS NOT NULL DROP TABLE #CustomerSeed;
+CREATE TABLE #CustomerSeed(
+  seed_customer int NOT NULL PRIMARY KEY,
+  customer_type varchar(20) NOT NULL,
+  first_name    varchar(100) NULL,
+  last_name     varchar(100) NULL,
+  business_name varchar(200) NULL,
+  full_name     varchar(200) NULL,
+  tax_identifier varchar(50) NULL,
+  branch_code   varchar(10) NOT NULL,
+  sic_code      bigint NULL
+);
+
+;WITH n AS (
+  SELECT TOP (@CustomerCountTarget) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS rn
+  FROM sys.all_objects
+)
+INSERT INTO #CustomerSeed(seed_customer, customer_type, first_name, last_name, business_name, full_name, tax_identifier, branch_code, sic_code)
+SELECT n.rn,
+       CASE WHEN n.rn % 6 = 0 THEN 'business' ELSE 'individual' END,
+       CASE WHEN n.rn % 6 = 0 THEN NULL ELSE (SELECT TOP 1 name FROM #FirstNames ORDER BY NEWID()) END,
+       CASE WHEN n.rn % 6 = 0 THEN NULL ELSE (SELECT TOP 1 name FROM #LastNames ORDER BY NEWID()) END,
+       CASE WHEN n.rn % 6 = 0 THEN CONCAT(
+              (SELECT TOP 1 name FROM #LastNames ORDER BY NEWID()),
+              ' ',
+              CASE WHEN n.rn % 12 = 0 THEN 'Dental' WHEN n.rn % 11 = 0 THEN 'Auto Repair'
+                   WHEN n.rn % 10 = 0 THEN 'Coffee' WHEN n.rn % 9 = 0 THEN 'Market'
+                   WHEN n.rn % 8 = 0 THEN 'Construction' WHEN n.rn % 7 = 0 THEN 'Legal'
+                   ELSE 'Consulting' END
+            ) ELSE NULL END,
+       NULL, -- full_name computed below
+       CONCAT('TIN-', RIGHT(CONCAT('000000', n.rn), 6)),
+       (SELECT TOP 1 branch_code FROM #BranchSeed ORDER BY NEWID()),
+       CASE WHEN n.rn % 6 = 0 THEN
+             CASE WHEN n.rn % 3 = 0 THEN 7399 WHEN n.rn % 5 = 0 THEN 5812 ELSE 5411 END
+            ELSE NULL END
+FROM n;
+
+UPDATE #CustomerSeed
+SET full_name = CASE WHEN customer_type='business' THEN business_name ELSE CONCAT(first_name,' ',last_name) END;
+
+DECLARE @CustomerMap TABLE(seed_customer int PRIMARY KEY, customer_id bigint NOT NULL);
+
+INSERT INTO dbo.customer (first_name, last_name, middle_name, preferred_name, title, suffix, date_of_birth, gender, marital_status,
+                          business_name, full_name, tax_identifier, government_id, government_id_type, citizenship, customer_type,
+                          customer_status, customer_since, kyc_status, kyc_last_updated, risk_rating, language_preference,
+                          occupation, employer_name, naics_code, dba_name, branch_id,
+                          jack_henry_cif_number, silverlake_customer_id, inquiry_code, inside_code, sales_associate_code,
+                          class_code, is_employee, vip_customer, is_deceased, created_at, updated_at,
+                          first_name_soundex, last_name_soundex)
+OUTPUT s.seed_customer, inserted.customer_id INTO @CustomerMap(seed_customer, customer_id)
+SELECT s.first_name, s.last_name, NULL, NULL, NULL, NULL,
+       CASE WHEN s.customer_type='individual'
+            THEN DATEFROMPARTS(1958 + (ABS(CHECKSUM(NEWID())) % 45), 1 + (ABS(CHECKSUM(NEWID())) % 12), 1 + (ABS(CHECKSUM(NEWID())) % 28))
+            ELSE NULL END,
+       CASE WHEN s.customer_type='individual' THEN CASE WHEN s.seed_customer % 2 = 0 THEN 'F' ELSE 'M' END ELSE NULL END,
+       CASE WHEN s.customer_type='individual' THEN CASE WHEN s.seed_customer % 3 = 0 THEN 'married' ELSE 'single' END ELSE NULL END,
+       s.business_name,
+       s.full_name,
+       s.tax_identifier,
+       NULL, NULL,
+       CASE WHEN s.customer_type='individual' THEN 'US' ELSE 'US' END,
+       s.customer_type,
+       'active',
+       DATEFROMPARTS(2012 + (ABS(CHECKSUM(NEWID())) % 12), 1 + (ABS(CHECKSUM(NEWID())) % 12), 1 + (ABS(CHECKSUM(NEWID())) % 28)),
+       CASE WHEN s.customer_type='individual' THEN 'verified' ELSE 'verified' END,
+       @Today,
+       CASE WHEN s.seed_customer % 20 = 0 THEN 'high' WHEN s.seed_customer % 7 = 0 THEN 'medium' ELSE 'low' END,
+       'en',
+       CASE WHEN s.customer_type='individual' THEN CASE WHEN s.seed_customer % 9 = 0 THEN 'Engineer'
+                                                        WHEN s.seed_customer % 8 = 0 THEN 'Teacher'
+                                                        WHEN s.seed_customer % 7 = 0 THEN 'Nurse'
+                                                        WHEN s.seed_customer % 6 = 0 THEN 'Accountant'
+                                                        ELSE 'Manager' END
+            ELSE 'Owner' END,
+       CASE WHEN s.customer_type='individual' THEN CASE WHEN s.seed_customer % 5 = 0 THEN 'City of Long Beach'
+                                                        WHEN s.seed_customer % 4 = 0 THEN 'MemorialCare'
+                                                        WHEN s.seed_customer % 3 = 0 THEN 'UC Irvine'
+                                                        ELSE 'Self Employed' END
+            ELSE s.business_name END,
+       NULL,
+       CASE WHEN s.customer_type='business' THEN CONCAT(s.business_name,' LLC') ELSE NULL END,
+       bm.branch_id,
+       CONCAT('CIF', RIGHT(CONCAT('0000000', s.seed_customer),7)),
+       CONCAT('SL',  RIGHT(CONCAT('0000000', s.seed_customer),7)),
+       NULL,NULL,NULL,NULL,
+       NULL, 0,
+       CASE WHEN s.seed_customer % 25 = 0 THEN 1 ELSE 0 END,
+       0,
+       @Now, @Now,
+       NULL, NULL
+FROM #CustomerSeed s
+JOIN @BranchMap bm ON bm.branch_code = s.branch_code
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.customer c WHERE c.tax_identifier = s.tax_identifier
+);
+
+-- Map existing customers if rerun
+INSERT INTO @CustomerMap(seed_customer, customer_id)
+SELECT s.seed_customer, c.customer_id
+FROM #CustomerSeed s
+JOIN dbo.customer c ON c.tax_identifier = s.tax_identifier
+WHERE NOT EXISTS (SELECT 1 FROM @CustomerMap m WHERE m.seed_customer = s.seed_customer);
+
+--------------------------------------------------------------------------------
+-- 11) Customer contacts + addresses (entity_contact / entity_address)
+--------------------------------------------------------------------------------
+-- Contact: email + mobile
+DECLARE @CustomerEmailContact TABLE(customer_id bigint PRIMARY KEY, contact_id bigint NOT NULL);
+DECLARE @CustomerPhoneContact TABLE(customer_id bigint PRIMARY KEY, contact_id bigint NOT NULL);
+
+INSERT INTO dbo.contact_info(contact_type, contact_value, contact_subtype, is_primary, is_verified, verification_date, can_contact, preferred_time, created_at, updated_at)
+OUTPUT cm.customer_id, inserted.contact_id INTO @CustomerEmailContact(customer_id, contact_id)
+SELECT cm.customer_id,
+       CONCAT(LOWER(REPLACE(s.full_name,' ','.')), '.', RIGHT(CONCAT('0000', s.seed_customer),4), '@example.com'),
+       'personal',
+       1, 1, @Now, 1, NULL, @Now, @Now
+FROM #CustomerSeed s
+JOIN @CustomerMap cm ON cm.seed_customer = s.seed_customer
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.entity_contact ec
+  JOIN dbo.contact_info ci ON ci.contact_id = ec.contact_id
+  WHERE ec.entity_type='customer' AND ec.entity_id = cm.customer_id AND ci.contact_type='email'
+);
+
+INSERT INTO dbo.contact_info(contact_type, contact_value, contact_subtype, is_primary, is_verified, verification_date, can_contact, preferred_time, created_at, updated_at)
+OUTPUT cm.customer_id, inserted.contact_id INTO @CustomerPhoneContact(customer_id, contact_id)
+SELECT cm.customer_id,
+       CONCAT(CASE WHEN s.branch_code LIKE 'LB-%' THEN '562' WHEN s.branch_code LIKE 'OC-%' THEN '714' WHEN s.branch_code LIKE 'LA-%' THEN '310' ELSE '805' END,
+              '-555-',
+              RIGHT(CONCAT('0000', (ABS(CHECKSUM(NEWID())) % 10000)),4)),
+       'mobile',
+       1, 0, NULL, 1, 'afternoon', @Now, @Now
+FROM #CustomerSeed s
+JOIN @CustomerMap cm ON cm.seed_customer = s.seed_customer
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.entity_contact ec
+  JOIN dbo.contact_info ci ON ci.contact_id = ec.contact_id
+  WHERE ec.entity_type='customer' AND ec.entity_id = cm.customer_id AND ci.contact_type='phone'
+);
+
+INSERT INTO dbo.entity_contact(entity_type, entity_id, contact_id, contact_purpose, is_current, start_date, end_date, created_at, updated_at)
+SELECT 'customer', ce.customer_id, ce.contact_id, 'email', 1, @Today, NULL, @Now, @Now
+FROM @CustomerEmailContact ce
+WHERE NOT EXISTS (SELECT 1 FROM dbo.entity_contact ec WHERE ec.entity_type='customer' AND ec.entity_id=ce.customer_id AND ec.contact_id=ce.contact_id);
+
+INSERT INTO dbo.entity_contact(entity_type, entity_id, contact_id, contact_purpose, is_current, start_date, end_date, created_at, updated_at)
+SELECT 'customer', cp.customer_id, cp.contact_id, 'mobile', 1, @Today, NULL, @Now, @Now
+FROM @CustomerPhoneContact cp
+WHERE NOT EXISTS (SELECT 1 FROM dbo.entity_contact ec WHERE ec.entity_type='customer' AND ec.entity_id=cp.customer_id AND ec.contact_id=cp.contact_id);
+
+-- Customer addresses (synthetic but plausible)
+DECLARE @CustomerAddr TABLE(customer_id bigint PRIMARY KEY, address_id bigint NOT NULL);
+
+INSERT INTO dbo.address(address_line1, address_line2, city, state, postal_code, country, latitude, longitude, created_at, updated_at)
+OUTPUT cm.customer_id, inserted.address_id INTO @CustomerAddr(customer_id, address_id)
+SELECT cm.customer_id,
+       CONCAT(100 + (ABS(CHECKSUM(NEWID())) % 9000), ' ',
+              CASE WHEN s.branch_code LIKE 'LB-%' THEN 'Pacific Ave'
+                   WHEN s.branch_code LIKE 'OC-%' THEN 'Harbor Blvd'
+                   WHEN s.branch_code LIKE 'LA-%' THEN 'Hawthorne Blvd'
+                   ELSE 'State St' END),
+       NULL,
+       CASE WHEN s.branch_code LIKE 'LB-%' THEN 'Long Beach'
+            WHEN s.branch_code LIKE 'OC-%' THEN 'Santa Ana'
+            WHEN s.branch_code LIKE 'LA-%' THEN 'Torrance'
+            ELSE 'Santa Barbara' END,
+       'CA',
+       CASE WHEN s.branch_code LIKE 'LB-%' THEN '90802'
+            WHEN s.branch_code LIKE 'OC-%' THEN '92705'
+            WHEN s.branch_code LIKE 'LA-%' THEN '90505'
+            ELSE '93101' END,
+       'USA',
+       NULL,NULL,@Now,@Now
+FROM #CustomerSeed s
+JOIN @CustomerMap cm ON cm.seed_customer = s.seed_customer
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.entity_address ea WHERE ea.entity_type='customer' AND ea.entity_id = cm.customer_id
+);
+
+INSERT INTO dbo.entity_address(entity_type, entity_id, address_id, address_purpose, is_current, start_date, end_date, created_at, updated_at)
+SELECT 'customer', ca.customer_id, ca.address_id, 'mailing', 1, @Today, NULL, @Now, @Now
+FROM @CustomerAddr ca
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.entity_address ea WHERE ea.entity_type='customer' AND ea.entity_id=ca.customer_id AND ea.address_id=ca.address_id
+);
+
+--------------------------------------------------------------------------------
+-- 12) Household memberships (assign each customer to a household)
+--------------------------------------------------------------------------------
+;WITH c AS (
+  SELECT cm.seed_customer, cm.customer_id,
+         1 + (cm.seed_customer % @HouseholdCount) AS seed_hh
+  FROM @CustomerMap cm
+)
+INSERT INTO dbo.household_membership(household_id, customer_id, relationship_role, is_primary_member, is_head_of_household,
+                                    membership_start_date, membership_end_date, rollup_accounts, rollup_percentage,
+                                    ownership_percentage, control_type, notes, created_at, updated_at)
+SELECT hm.household_id,
+       c.customer_id,
+       CASE WHEN c.seed_customer % 7 = 1 THEN 'Head'
+            WHEN c.seed_customer % 7 = 2 THEN 'Spouse'
+            WHEN c.seed_customer % 7 = 3 THEN 'Child'
+            WHEN c.seed_customer % 7 = 4 THEN 'Partner'
+            ELSE 'Member' END,
+       CASE WHEN c.seed_customer % 7 = 1 THEN 1 ELSE 0 END,
+       CASE WHEN c.seed_customer % 7 = 1 THEN 1 ELSE 0 END,
+       DATEADD(day, -(ABS(CHECKSUM(NEWID())) % 2000), @Today),
+       NULL,
+       1,
+       CAST(100.00 AS decimal(5,2)),
+       CAST(CASE WHEN c.seed_customer % 7 IN (1,2) THEN 50.00
+                 WHEN c.seed_customer % 7 = 3 THEN 0.00
+                 ELSE 100.00 END AS decimal(5,2)),
+       NULL,
+       NULL,
+       @Now, @Now
+FROM c
+JOIN @HouseholdMap hm ON hm.seed_hh = c.seed_hh
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.household_membership m
+  WHERE m.household_id = hm.household_id AND m.customer_id = c.customer_id
+);
+
+--------------------------------------------------------------------------------
+-- 13) Officer assignments (customer_officer_assignment requires: customer_id,
+--     officer_code, relationship_type)
+--------------------------------------------------------------------------------
+INSERT INTO dbo.customer_officer_assignment(customer_id, officer_code, relationship_type, assigned_at, updated_at)
+SELECT cm.customer_id,
+       (SELECT TOP 1 officer_code FROM @EmployeeMap ORDER BY NEWID()),
+       CASE WHEN cs.customer_type='business' THEN 'business_banker' ELSE 'retail_banker' END,
+       @Now, @Now
+FROM #CustomerSeed cs
+JOIN @CustomerMap cm ON cm.seed_customer = cs.seed_customer
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.customer_officer_assignment coa
+  WHERE coa.customer_id = cm.customer_id
+);
+
+--------------------------------------------------------------------------------
+-- 14) Customer SIC for business customers (customer_sic_code)
+--------------------------------------------------------------------------------
+INSERT INTO dbo.customer_sic_code(customer_id, sic_code, assigned_at, updated_at)
+SELECT cm.customer_id, cs.sic_code, @Now, @Now
+FROM #CustomerSeed cs
+JOIN @CustomerMap cm ON cm.seed_customer = cs.seed_customer
+WHERE cs.customer_type='business' AND cs.sic_code IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM dbo.customer_sic_code x WHERE x.customer_id=cm.customer_id AND x.sic_code=cs.sic_code);
+
+--------------------------------------------------------------------------------
+-- 15) Accounts + ownership
+--     Account required: account_number, account_type, account_status.
+--     Ownership required: account_id, customer_id, ownership_type.
+--------------------------------------------------------------------------------
+IF OBJECT_ID('tempdb..#AccountSeed') IS NOT NULL DROP TABLE #AccountSeed;
+CREATE TABLE #AccountSeed(
+  seed_account int IDENTITY(1,1) PRIMARY KEY,
+  customer_id  bigint NOT NULL,
+  branch_id    bigint NOT NULL,
+  account_number varchar(50) NOT NULL,
+  account_type   varchar(50) NOT NULL,
+  account_subtype varchar(50) NULL,
+  account_status varchar(20) NOT NULL,
+  balance        decimal(15,2) NULL,
+  available_balance decimal(15,2) NULL,
+  currency      varchar(3) NULL,
+  interest_rate decimal(9,4) NULL,
+  credit_limit  decimal(15,2) NULL,
+  opened_date   date NULL,
+  maturity_date date NULL
+);
+
+-- Helper: choose a branch for the account (customer's home branch)
+;WITH c AS (
+  SELECT cm.customer_id, c.branch_id,
+         cs.customer_type,
+         ROW_NUMBER() OVER (ORDER BY cm.customer_id) AS rn
+  FROM @CustomerMap cm
+  JOIN dbo.customer c ON c.customer_id = cm.customer_id
+  JOIN #CustomerSeed cs ON cs.seed_customer = cm.seed_customer
+)
+INSERT INTO #AccountSeed(customer_id, branch_id, account_number, account_type, account_subtype, account_status,
+                         balance, available_balance, currency, interest_rate, credit_limit, opened_date, maturity_date)
+SELECT c.customer_id, c.branch_id,
+       CONCAT('7', RIGHT(CONCAT('000000000', c.rn), 9)),
+       CASE WHEN c.customer_type='business' THEN 'checking' ELSE 'checking' END,
+       CASE WHEN c.customer_type='business' THEN 'business_checking' ELSE 'standard_checking' END,
+       'active',
+       CAST(500 + (ABS(CHECKSUM(NEWID())) % 25000) AS decimal(15,2)),
+       CAST(500 + (ABS(CHECKSUM(NEWID())) % 25000) AS decimal(15,2)),
+       'USD',
+       NULL, NULL,
+       DATEADD(day, -(ABS(CHECKSUM(NEWID())) % 2500), @Today),
+       NULL
+FROM c;
+
+-- Savings / money market for most
+INSERT INTO #AccountSeed(customer_id, branch_id, account_number, account_type, account_subtype, account_status,
+                         balance, available_balance, currency, interest_rate, credit_limit, opened_date, maturity_date)
+SELECT c.customer_id, c.branch_id,
+       CONCAT('8', RIGHT(CONCAT('000000000', c.rn), 9)),
+       'savings',
+       CASE WHEN c.customer_type='business' THEN 'money_market' ELSE 'standard_savings' END,
+       'active',
+       CAST(200 + (ABS(CHECKSUM(NEWID())) % 180000) AS decimal(15,2)),
+       CAST(200 + (ABS(CHECKSUM(NEWID())) % 180000) AS decimal(15,2)),
+       'USD',
+       CAST(0.005 + (ABS(CHECKSUM(NEWID())) % 250)/10000.0 AS decimal(9,4)),
+       NULL,
+       DATEADD(day, -(ABS(CHECKSUM(NEWID())) % 2500), @Today),
+       NULL
+FROM (
+  SELECT cm.customer_id, c.branch_id, cs.customer_type,
+         ROW_NUMBER() OVER (ORDER BY cm.customer_id) AS rn
+  FROM @CustomerMap cm
+  JOIN dbo.customer c ON c.customer_id = cm.customer_id
+  JOIN #CustomerSeed cs ON cs.seed_customer = cm.seed_customer
+) c
+WHERE (c.rn % 10) <> 0;  -- 90% get savings
+
+-- Credit cards for some individuals
+INSERT INTO #AccountSeed(customer_id, branch_id, account_number, account_type, account_subtype, account_status,
+                         balance, available_balance, currency, interest_rate, credit_limit, opened_date, maturity_date)
+SELECT c.customer_id, c.branch_id,
+       CONCAT('9', RIGHT(CONCAT('000000000', c.rn), 9)),
+       'credit_card',
+       CASE WHEN c.rn % 3 = 0 THEN 'platinum_rewards' ELSE 'standard_credit' END,
+       'active',
+       CAST(-(50 + (ABS(CHECKSUM(NEWID())) % 6000)) AS decimal(15,2)),
+       NULL,
+       'USD',
+       CAST(0.1799 AS decimal(9,4)),
+       CAST(2000 + (ABS(CHECKSUM(NEWID())) % 18000) AS decimal(15,2)),
+       DATEADD(day, -(ABS(CHECKSUM(NEWID())) % 2000), @Today),
+       NULL
+FROM (
+  SELECT cm.customer_id, c.branch_id, cs.customer_type,
+         ROW_NUMBER() OVER (ORDER BY cm.customer_id) AS rn
+  FROM @CustomerMap cm
+  JOIN dbo.customer c ON c.customer_id = cm.customer_id
+  JOIN #CustomerSeed cs ON cs.seed_customer = cm.seed_customer
+) c
+WHERE c.customer_type='individual' AND (c.rn % 4) = 0;
+
+-- CDs for a subset
+INSERT INTO #AccountSeed(customer_id, branch_id, account_number, account_type, account_subtype, account_status,
+                         balance, available_balance, currency, interest_rate, credit_limit, opened_date, maturity_date)
+SELECT c.customer_id, c.branch_id,
+       CONCAT('6', RIGHT(CONCAT('000000000', c.rn), 9)),
+       'cd',
+       CASE WHEN c.rn % 3 = 0 THEN '12_month_cd' WHEN c.rn % 3 = 1 THEN '6_month_cd' ELSE '24_month_cd' END,
+       'active',
+       CAST(5000 + (ABS(CHECKSUM(NEWID())) % 195000) AS decimal(15,2)),
+       NULL,
+       'USD',
+       CAST(0.0300 + (ABS(CHECKSUM(NEWID())) % 200)/10000.0 AS decimal(9,4)),
+       NULL,
+       DATEADD(day, -(ABS(CHECKSUM(NEWID())) % 900), @Today),
+       DATEADD(day, 120 + (ABS(CHECKSUM(NEWID())) % 700), @Today)
+FROM (
+  SELECT cm.customer_id, c.branch_id,
+         ROW_NUMBER() OVER (ORDER BY cm.customer_id) AS rn
+  FROM @CustomerMap cm
+  JOIN dbo.customer c ON c.customer_id = cm.customer_id
+) c
+WHERE (c.rn % 12) = 0;
+
+-- Mortgages / HELOC for some households (assign to head members only)
+INSERT INTO #AccountSeed(customer_id, branch_id, account_number, account_type, account_subtype, account_status,
+                         balance, available_balance, currency, interest_rate, credit_limit, opened_date, maturity_date)
+SELECT c.customer_id, c.branch_id,
+       CONCAT('5', RIGHT(CONCAT('000000000', c.rn), 9)),
+       CASE WHEN c.rn % 2 = 0 THEN 'mortgage' ELSE 'heloc' END,
+       CASE WHEN c.rn % 2 = 0 THEN 'conventional_mortgage' ELSE 'standard_heloc' END,
+       'active',
+       CAST(-(80000 + (ABS(CHECKSUM(NEWID())) % 720000)) AS decimal(15,2)),
+       NULL,
+       'USD',
+       CAST(CASE WHEN c.rn % 2 = 0 THEN 0.0625 ELSE 0.0825 END AS decimal(9,4)),
+       CAST(CASE WHEN c.rn % 2 = 0 THEN NULL ELSE (25000 + (ABS(CHECKSUM(NEWID())) % 175000)) END AS decimal(15,2)),
+       DATEADD(day, -(900 + (ABS(CHECKSUM(NEWID())) % 4000)), @Today),
+       NULL
+FROM (
+  SELECT cm.customer_id, c.branch_id,
+         ROW_NUMBER() OVER (ORDER BY cm.customer_id) AS rn
+  FROM @CustomerMap cm
+  JOIN dbo.customer c ON c.customer_id = cm.customer_id
+) c
+WHERE (c.rn % 18) = 0;
+
+-- Insert accounts
+DECLARE @AccountMap TABLE(account_number varchar(50) PRIMARY KEY, account_id bigint NOT NULL);
+
+INSERT INTO dbo.account (account_number, account_type, account_subtype, account_status, balance, available_balance, currency,
+                         interest_rate, credit_limit, branch_id, product_code, opened_date, closed_date, last_transaction_date,
+                         maturity_date, jack_henry_account_id, silverlake_account_structure, account_class, statement_cycle,
+                         statement_code_desc, average_balance, last_maintenance_date, created_at, updated_at)
+OUTPUT inserted.account_number, inserted.account_id INTO @AccountMap(account_number, account_id)
+SELECT s.account_number, s.account_type, s.account_subtype, s.account_status, s.balance, s.available_balance, s.currency,
+       s.interest_rate, s.credit_limit, s.branch_id, NULL, s.opened_date, NULL, NULL,
+       s.maturity_date, CONCAT('JH-', s.account_number), NULL, NULL, NULL,
+       NULL, NULL, NULL, @Now, @Now
+FROM #AccountSeed s
+WHERE NOT EXISTS (SELECT 1 FROM dbo.account a WHERE a.account_number = s.account_number);
+
+-- Ownership: primary owner
+INSERT INTO dbo.account_ownership(account_id, customer_id, ownership_type, ownership_percentage,
+                                 is_primary_owner, signing_authority, can_view_statements, can_make_transactions,
+                                 transaction_limit, relationship_start_date, relationship_end_date, created_at, updated_at)
+SELECT am.account_id, s.customer_id,
+       CASE WHEN s.account_type IN ('credit_card','heloc','mortgage') THEN 'borrower' ELSE 'owner' END,
+       CAST(100.00 AS decimal(5,2)),
+       1, 1, 1, 1,
+       CASE WHEN s.account_type='checking' THEN 5000
+            WHEN s.account_type='savings' THEN 25000
+            WHEN s.account_type='credit_card' THEN 5000
+            ELSE NULL END,
+       s.opened_date, NULL, @Now, @Now
+FROM #AccountSeed s
+JOIN @AccountMap am ON am.account_number = s.account_number
+WHERE NOT EXISTS (
+  SELECT 1 FROM dbo.account_ownership ao
+  WHERE ao.account_id = am.account_id AND ao.customer_id = s.customer_id
+);
+
+-- Joint owners: for some checking/savings (use household spouse members)
+;WITH joint AS (
+  SELECT DISTINCT ao.account_id, hm.household_id,
+         ao.customer_id AS primary_customer_id
+  FROM dbo.account_ownership ao
+  JOIN dbo.account a ON a.account_id = ao.account_id
+  JOIN dbo.household_membership hm ON hm.customer_id = ao.customer_id
+  WHERE ao.is_primary_owner = 1
+    AND a.account_type IN ('checking','savings')
+    AND (ao.account_id % 5) = 0  -- 20% joint
+)
+INSERT INTO dbo.account_ownership(account_id, customer_id, ownership_type, ownership_percentage,
+                                 is_primary_owner, signing_authority, can_view_statements, can_make_transactions,
+                                 transaction_limit, relationship_start_date, relationship_end_date, created_at, updated_at)
+SELECT j.account_id,
+       hm2.customer_id,
+       'owner',
+       CAST(50.00 AS decimal(5,2)),
+       0, 1, 1, 1,
+       3000,
+       DATEADD(day,-(ABS(CHECKSUM(NEWID())) % 2000), @Today),
+       NULL, @Now, @Now
+FROM joint j
+JOIN dbo.household_membership hm2
+  ON hm2.household_id = j.household_id
+ AND hm2.customer_id <> j.primary_customer_id
+WHERE hm2.relationship_role IN ('Spouse','Partner')
+  AND NOT EXISTS (SELECT 1 FROM dbo.account_ownership ao WHERE ao.account_id=j.account_id AND ao.customer_id=hm2.customer_id);
+
+--------------------------------------------------------------------------------
+-- 16) Financial transactions (set-based generator)
+--     Required per your screenshot: account_id, amount, status, transaction_date, posting_date.
+--------------------------------------------------------------------------------
+;WITH acct AS (
+  SELECT a.account_id, a.account_type, a.account_subtype,
+         CAST(ISNULL(a.balance,0) AS decimal(18,2)) AS start_bal
+  FROM dbo.account a
+  WHERE a.account_number IN (SELECT account_number FROM #AccountSeed)
+),
+nums AS (
+  SELECT TOP (@TxnsPerAccount) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+  FROM sys.all_objects
+),
+tx_raw AS (
+  SELECT ac.account_id,
+         ac.account_type,
+         DATEADD(day, -(ABS(CHECKSUM(NEWID())) % @DaysBack), @Today) AS tx_day,
+         -- signed amount: +credit / -debit for deposit accounts; credit cards mostly negative purchases
+         CAST(
+           CASE
+             WHEN ac.account_type='credit_card' THEN
+               CASE WHEN (ABS(CHECKSUM(NEWID())) % 10) = 0
+                    THEN (50 + (ABS(CHECKSUM(NEWID())) % 1200))          -- payment (credit)
+                    ELSE -(3 + (ABS(CHECKSUM(NEWID())) % 250))          -- purchase (debit)
+               END
+             WHEN ac.account_type IN ('mortgage','heloc') THEN
+               CASE WHEN (ABS(CHECKSUM(NEWID())) % 8) = 0
+                    THEN -(25 + (ABS(CHECKSUM(NEWID())) % 200))         -- draw/fee
+                    ELSE (450 + (ABS(CHECKSUM(NEWID())) % 2500)) * -1   -- payment outflow
+               END
+             ELSE
+               CASE WHEN (ABS(CHECKSUM(NEWID())) % 7) = 0
+                    THEN (1200 + (ABS(CHECKSUM(NEWID())) % 4500))       -- credit (payroll/ach)
+                    ELSE -(5 + (ABS(CHECKSUM(NEWID())) % 320))          -- debit (spend)
+               END
+           END AS decimal(18,2)
+         ) AS amount,
+         (ABS(CHECKSUM(NEWID())) % 100) AS pick
+  FROM acct ac
+  CROSS JOIN nums
+),
+tx_labeled AS (
+  SELECT r.*,
+         CASE
+           WHEN r.account_type='credit_card' AND r.amount < 0 THEN 'Debit Card Purchase'
+           WHEN r.account_type='credit_card' AND r.amount > 0 THEN 'Credit Card Payment'
+           WHEN r.account_type IN ('mortgage','heloc') THEN 'Loan Payment'
+           WHEN r.amount > 2000 THEN 'Payroll'
+           WHEN r.pick < 10 THEN 'ATM Withdrawal'
+           WHEN r.pick < 25 THEN 'Debit Card Purchase'
+           WHEN r.pick < 35 THEN 'ACH Debit'
+           WHEN r.pick < 45 THEN 'ACH Credit'
+           WHEN r.pick < 55 THEN 'Internal Transfer'
+           WHEN r.pick < 60 THEN 'Mobile Deposit'
+           WHEN r.pick < 65 THEN 'Check'
+           WHEN r.pick < 70 THEN 'Cash Deposit'
+           WHEN r.pick < 80 THEN 'Service Fee'
+           ELSE 'Interest'
+         END AS cat_name,
+         CASE
+           WHEN r.pick < 10 THEN 'ATM W/D'
+           WHEN r.pick < 25 THEN 'POS'
+           WHEN r.pick < 45 THEN 'ACH'
+           WHEN r.pick < 55 THEN 'XFER'
+           WHEN r.pick < 60 THEN 'MOBDEP'
+           WHEN r.pick < 65 THEN 'CHECK'
+           WHEN r.pick < 70 THEN 'CASHDEP'
+           WHEN r.pick < 80 THEN 'FEE'
+           ELSE 'INT'
+         END AS txn_code
+  FROM tx_raw r
+),
+tx_ordered AS (
+  SELECT t.*,
+         ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY tx_day, ABS(CHECKSUM(NEWID()))) AS rn,
+         SUM(amount) OVER (PARTITION BY account_id ORDER BY tx_day, (SELECT NULL)
+                           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running
+  FROM tx_labeled t
+)
+INSERT INTO dbo.financial_transaction(account_id, amount, transaction_code, transaction_type, status,
+                                     transaction_date, posting_date, description, reference_number,
+                                     merchant_name, merchant_category_code, category_id, transfer_group_id,
+                                     counterparty_account_id, related_transaction_id, ledger_balance_after,
+                                     available_balance_after, source_system, source_transaction_id, raw_payload,
+                                     created_at, updated_at)
+SELECT o.account_id,
+       o.amount,
+       o.txn_code,
+       NULL,
+       'posted',
+       DATEADD(hour, (ABS(CHECKSUM(NEWID())) % 24), CAST(o.tx_day AS datetime2(7))),
+       DATEADD(hour, 1 + (ABS(CHECKSUM(NEWID())) % 12), CAST(o.tx_day AS datetime2(7))),
+       CASE o.cat_name
+         WHEN 'Payroll' THEN 'PAYROLL DIRECT DEP'
+         WHEN 'ATM Withdrawal' THEN 'ATM WITHDRAWAL'
+         WHEN 'Debit Card Purchase' THEN CONCAT('CARD PURCHASE - ',
+              CASE WHEN o.pick % 5 = 0 THEN 'TARGET'
+                   WHEN o.pick % 5 = 1 THEN 'COSTCO'
+                   WHEN o.pick % 5 = 2 THEN 'TRADER JOES'
+                   WHEN o.pick % 5 = 3 THEN 'CHEVRON'
+                   ELSE 'AMZN MKTPLACE' END)
+         WHEN 'ACH Debit' THEN CONCAT('ACH DEBIT - ',
+              CASE WHEN o.pick % 4 = 0 THEN 'SPECTRUM'
+                   WHEN o.pick % 4 = 1 THEN 'SCE'
+                   WHEN o.pick % 4 = 2 THEN 'SO CAL GAS'
+                   ELSE 'GEICO' END)
+         WHEN 'ACH Credit' THEN 'ACH CREDIT'
+         WHEN 'Internal Transfer' THEN 'INTERNAL TRANSFER'
+         WHEN 'Mobile Deposit' THEN 'MOBILE DEPOSIT'
+         WHEN 'Check' THEN CONCAT('CHECK #', 1000 + (ABS(CHECKSUM(NEWID())) % 8000))
+         WHEN 'Cash Deposit' THEN 'CASH DEPOSIT'
+         WHEN 'Loan Payment' THEN 'LOAN PAYMENT'
+         WHEN 'Credit Card Payment' THEN 'CC PAYMENT'
+         WHEN 'Service Fee' THEN 'MONTHLY SERVICE FEE'
+         ELSE 'INTEREST'
+       END,
+       CONCAT('REF', o.account_id, '-', RIGHT(CONCAT('000000', o.rn), 6)),
+       CASE WHEN o.cat_name IN ('Debit Card Purchase') THEN
+             CASE WHEN o.pick % 6 = 0 THEN 'Target'
+                  WHEN o.pick % 6 = 1 THEN 'Costco'
+                  WHEN o.pick % 6 = 2 THEN 'Trader Joe''s'
+                  WHEN o.pick % 6 = 3 THEN 'Chevron'
+                  WHEN o.pick % 6 = 4 THEN 'Starbucks'
+                  ELSE 'Amazon' END
+            ELSE NULL END,
+       CASE WHEN o.cat_name='Debit Card Purchase' THEN
+             CASE WHEN o.pick % 4 = 0 THEN '5411'
+                  WHEN o.pick % 4 = 1 THEN '5541'
+                  WHEN o.pick % 4 = 2 THEN '5812'
+                  ELSE '5999' END
+            ELSE NULL END,
+       tcm.category_id,
+       NULL, NULL, NULL,
+       CAST( (SELECT start_bal FROM acct a WHERE a.account_id = o.account_id) + o.running AS decimal(18,2)),
+       CAST( (SELECT start_bal FROM acct a WHERE a.account_id = o.account_id) + o.running AS decimal(18,2)),
+       'core',
+       CONCAT('TXN-', o.account_id, '-', RIGHT(CONCAT('000000', o.rn), 6)),
+       NULL,
+       @Now, @Now
+FROM tx_ordered o
+JOIN @TxnCatMap tcm ON tcm.name = o.cat_name;
+
+--------------------------------------------------------------------------------
+-- 17) Notes + note versions + audit log (minimal but realistic)
+--     Required for note: target_type, importance, visibility.
+--     Required for note_version: note_id, version_number, title, body, author_employee_id,
+--                                is_current, is_soft_deleted.
+--------------------------------------------------------------------------------
+DECLARE @NoteMap TABLE(customer_id bigint PRIMARY KEY, note_id bigint NOT NULL);
+
+INSERT INTO dbo.note(customer_id, account_id, target_type, category_id, importance, visibility,
+                     legal_hold, retention_years, is_pinned, created_at, updated_at)
+OUTPUT c.customer_id, inserted.note_id INTO @NoteMap(customer_id, note_id)
+SELECT c.customer_id,
+       (SELECT TOP 1 a.account_id FROM dbo.account a
+        JOIN dbo.account_ownership ao ON ao.account_id=a.account_id AND ao.customer_id=c.customer_id
+        ORDER BY NEWID()),
+       'customer',
+       (SELECT TOP 1 category_id FROM @NoteCatMap ORDER BY NEWID()),
+       CASE WHEN c.customer_id % 25 = 0 THEN 'high' WHEN c.customer_id % 7 = 0 THEN 'medium' ELSE 'low' END,
+       'internal',
+       0, NULL,
+       CASE WHEN c.customer_id % 20 = 0 THEN 1 ELSE 0 END,
+       @Now, @Now
+FROM @CustomerMap c
+WHERE NOT EXISTS (SELECT 1 FROM dbo.note n WHERE n.customer_id = c.customer_id);
+
+INSERT INTO dbo.note_version(note_id, version_number, title, body, author_employee_id, author_employee_name,
+                            is_current, is_soft_deleted, deleted_at, deleted_by_employee_id,
+                            encrypted_payload, created_at, modified_at)
+SELECT nm.note_id,
+       1,
+       CASE WHEN c.customer_id % 9 = 0 THEN 'Annual review & next steps'
+            WHEN c.customer_id % 8 = 0 THEN 'KYC refresh completed'
+            WHEN c.customer_id % 7 = 0 THEN 'Lending conversation'
+            WHEN c.customer_id % 6 = 0 THEN 'Service follow-up'
+            ELSE 'Customer note' END,
+       CASE WHEN c.customer_id % 9 = 0 THEN 'Reviewed balances, cash flow, and upcoming needs. Discussed setting up automatic transfers and maintaining emergency cash.'
+            WHEN c.customer_id % 8 = 0 THEN 'Verified contact details and updated employment/business information. Risk rating confirmed.'
+            WHEN c.customer_id % 7 = 0 THEN 'Discussed refinance/HELOC options and documentation needed. Customer considering a 30-year fixed vs. ARM.'
+            WHEN c.customer_id % 6 = 0 THEN 'Followed up on recent service request. Customer satisfied; no further action required.'
+            ELSE 'General relationship note for demo purposes.' END,
+       (SELECT TOP 1 employee_id FROM @EmployeeMap ORDER BY NEWID()),
+       (SELECT TOP 1 CONCAT(first_name,' ',last_name) FROM dbo.employee ORDER BY NEWID()),
+       1, 0, NULL, NULL, NULL, @Now, @Now
+FROM @NoteMap nm
+JOIN @CustomerMap c ON c.customer_id = nm.customer_id
+WHERE NOT EXISTS (SELECT 1 FROM dbo.note_version nv WHERE nv.note_id = nm.note_id AND nv.version_number = 1);
+
+-- Audit log entries (insert one "create" per note)
+INSERT INTO dbo.note_audit_log(note_id, version_id, action, actor_employee_id, actor_employee_name, occurred_at,
+                               ip_address, user_agent, metadata_json, created_at)
+SELECT nm.note_id,
+       (SELECT TOP 1 nv.version_id FROM dbo.note_version nv WHERE nv.note_id = nm.note_id ORDER BY nv.version_number DESC),
+       'create',
+       (SELECT TOP 1 employee_id FROM @EmployeeMap ORDER BY NEWID()),
+       (SELECT TOP 1 CONCAT(first_name,' ',last_name) FROM dbo.employee ORDER BY NEWID()),
+       @Now,
+       '127.0.0.1',
+       'seed-script',
+       NULL,
+       @Now
+FROM @NoteMap nm
+WHERE NOT EXISTS (SELECT 1 FROM dbo.note_audit_log al WHERE al.note_id = nm.note_id AND al.action='create');
+
+--------------------------------------------------------------------------------
+-- 18) Contact history (calls/meetings) – enough to show activity feed
+--------------------------------------------------------------------------------
+INSERT INTO dbo.contact_history(customer_id, employee_id, contact_type, occurred_at, employee_name,
+                                summary, channel, outcome, created_at, updated_at)
+SELECT cm.customer_id,
+       em.employee_id,
+       CASE WHEN cm.customer_id % 3 = 0 THEN 'call' WHEN cm.customer_id % 3 = 1 THEN 'meeting' ELSE 'email' END,
+       DATEADD(day, -(ABS(CHECKSUM(NEWID())) % 180), @Now),
+       (SELECT TOP 1 CONCAT(first_name,' ',last_name) FROM dbo.employee WHERE employee_id = em.employee_id),
+       CASE WHEN cm.customer_id % 4 = 0 THEN 'Discussed account activity and upcoming needs.'
+            WHEN cm.customer_id % 4 = 1 THEN 'Follow-up on recent transaction dispute.'
+            WHEN cm.customer_id % 4 = 2 THEN 'Reviewed lending options and required documents.'
+            ELSE 'Routine relationship touchpoint.' END,
+       CASE WHEN cm.customer_id % 3 = 0 THEN 'phone' WHEN cm.customer_id % 3 = 1 THEN 'in_person' ELSE 'email' END,
+       CASE WHEN cm.customer_id % 5 = 0 THEN 'follow_up_required' ELSE 'completed' END,
+       @Now, @Now
+FROM @CustomerMap cm
+CROSS APPLY (SELECT TOP 1 employee_id FROM @EmployeeMap ORDER BY NEWID()) em(employee_id)
+WHERE (cm.customer_id % 5) = 0
+  AND NOT EXISTS (SELECT 1 FROM dbo.contact_history ch WHERE ch.customer_id = cm.customer_id);
+
+COMMIT TRAN;
+
+PRINT '✅ FMB synthetic demo dataset seeded successfully.';
