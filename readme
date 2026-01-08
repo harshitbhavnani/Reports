@@ -1,1 +1,646 @@
+-- ==================================================================================
+-- ClientIQ Banking Platform - SQL Server Replacement Seed v4.0
+-- Date Range: Oct 1 - Dec 31, 2025 | IDs: 900000+ entities, 910000+ accounts, 920000+ txns
+-- ==================================================================================
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+PRINT 'Starting ClientIQ replacement data import v4.0...';
+GO
 
+-- ============================================================================
+-- PHASE 1: DELETE EXISTING DEMO DATA
+-- ============================================================================
+PRINT 'Deleting existing demo data...';
+GO
+DELETE FROM note_audit_log;
+DELETE FROM note_version;
+DELETE FROM note;
+DELETE FROM debit_card;
+DELETE FROM debit_card_limit_profile;
+DELETE FROM contact_history;
+DELETE FROM online_banking_user;
+DELETE FROM financial_transaction;
+DELETE FROM account_sic_code;
+DELETE FROM employee_branch;
+DELETE FROM account_ownership;
+DELETE FROM household_membership;
+DELETE FROM entity_contact;
+DELETE FROM entity_address;
+DELETE FROM customer_officer_assignment;
+DELETE FROM account;
+DELETE FROM household;
+DELETE FROM customer;
+DELETE FROM branch;
+DELETE FROM contact_info WHERE contact_id >= 2000;
+DELETE FROM address WHERE address_id >= 2000;
+GO
+PRINT '  Demo data deleted.';
+GO
+
+-- ============================================================================
+-- PHASE 2: INSERT BRANCHES (27 real branches)
+-- ============================================================================
+PRINT 'Inserting branches...';
+GO
+SET IDENTITY_INSERT branch ON;
+GO
+INSERT INTO branch (branch_id, branch_name, branch_code, region_id, branch_type, is_active, manager_name, address_id, phone, fax, email, hours_of_operation, created_at, updated_at) VALUES
+(901, 'Belmont Shore', 'BLMSH', 2, 'retail', 1, NULL, NULL, '562-555-0101', NULL, 'belmontshore@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(902, 'Bixby Knolls', 'BXBYK', 2, 'retail', 1, NULL, NULL, '562-555-0102', NULL, 'bixbyknolls@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(903, 'Corona del Mar', 'CDMAR', 2, 'retail', 1, NULL, NULL, '949-555-0103', NULL, 'coronadelmar@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(904, 'Downey', 'DOWNY', 2, 'retail', 1, NULL, NULL, '562-555-0104', NULL, 'downey@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(905, 'East Long Beach', 'EASTLB', 2, 'retail', 1, NULL, NULL, '562-555-0105', NULL, 'eastlongbeach@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(906, 'Fullerton', 'FULTN', 2, 'retail', 1, NULL, NULL, '714-555-0106', NULL, 'fullerton@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(907, 'Garden Grove', 'GDNGV', 2, 'retail', 1, NULL, NULL, '714-555-0107', NULL, 'gardengrove@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(908, 'Huntington Beach', 'HNTBH', 2, 'retail', 1, NULL, NULL, '714-555-0108', NULL, 'huntingtonbeach@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(909, 'Laguna Beach', 'LGNBH', 2, 'retail', 1, NULL, NULL, '949-555-0109', NULL, 'lagunabeach@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(910, 'Laguna Hills', 'LGNHL', 2, 'retail', 1, NULL, NULL, '949-555-0110', NULL, 'lagunahills@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(911, 'Lake Forest', 'LKFST', 2, 'retail', 1, NULL, NULL, '949-555-0111', NULL, 'lakeforest@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(912, 'Lakewood', 'LKWOD', 2, 'retail', 1, NULL, NULL, '562-555-0112', NULL, 'lakewood@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(913, 'Los Altos', 'LOSLT', 2, 'retail', 1, NULL, NULL, '562-555-0113', NULL, 'losaltos@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(914, 'Main Office', 'MAINOF', 2, 'headquarters', 1, NULL, NULL, '562-555-0114', NULL, 'mainoffice@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(915, 'Memorial Office', 'MEMOF', 2, 'retail', 1, NULL, NULL, '562-555-0115', NULL, 'memorialoffice@clientiq.bank', 'Mon-Fri 9AM-4PM', '2025-09-15', '2025-09-15'),
+(916, 'Newport Beach', 'NWPBH', 2, 'retail', 1, NULL, NULL, '949-555-0116', NULL, 'newportbeach@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(917, 'Orange', 'ORNGE', 2, 'retail', 1, NULL, NULL, '714-555-0117', NULL, 'orange@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(918, 'Redondo Beach', 'RDNBH', 2, 'retail', 1, NULL, NULL, '310-555-0118', NULL, 'redondobeach@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(919, 'Rolling Hills Estates', 'RLHLE', 2, 'retail', 1, NULL, NULL, '310-555-0119', NULL, 'rollinghills@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(920, 'Rossmoor', 'RSSMR', 2, 'retail', 1, NULL, NULL, '562-555-0120', NULL, 'rossmoor@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(921, 'San Clemente', 'SCLMT', 2, 'retail', 1, NULL, NULL, '949-555-0121', NULL, 'sanclemente@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(922, 'San Juan Capistrano', 'SJCAP', 2, 'retail', 1, NULL, NULL, '949-555-0122', NULL, 'sanjuancap@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(923, 'Santa Ana', 'SNTAN', 2, 'retail', 1, NULL, NULL, '714-555-0123', NULL, 'santaana@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(924, 'Santa Ana Main', 'SNTAM', 2, 'retail', 1, NULL, NULL, '714-555-0124', NULL, 'santaanamain@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(925, 'Santa Barbara', 'SNTBR', 2, 'retail', 1, NULL, NULL, '805-555-0125', NULL, 'santabarbara@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(926, 'Torrance', 'TRNCE', 2, 'retail', 1, NULL, NULL, '310-555-0126', NULL, 'torrance@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15'),
+(927, 'Tustin', 'TUSTN', 2, 'retail', 1, NULL, NULL, '714-555-0127', NULL, 'tustin@clientiq.bank', 'Mon-Fri 9AM-5PM', '2025-09-15', '2025-09-15');
+GO
+SET IDENTITY_INSERT branch OFF;
+GO
+PRINT '  Imported: branch (27 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 3: INSERT ADDRESSES
+-- ============================================================================
+PRINT 'Inserting addresses...';
+GO
+SET IDENTITY_INSERT address ON;
+GO
+INSERT INTO address (address_id, address_line1, address_line2, city, state, postal_code, country, address_type, is_primary, validated, validation_date, created_at, updated_at) VALUES 
+(900001, '2847 Bellflower Blvd', 'Unit 4B', 'Long Beach', 'CA', '90815', 'US', 'home', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15'),
+(900002, '2847 Bellflower Blvd', 'Unit 4B', 'Long Beach', 'CA', '90815', 'US', 'home', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15'),
+(900003, '3456 Anaheim St', NULL, 'Long Beach', 'CA', '90804', 'US', 'home', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15'),
+(900004, '3456 Anaheim St', NULL, 'Long Beach', 'CA', '90804', 'US', 'home', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15'),
+(900005, '189 Bay Shore Ave', NULL, 'Long Beach', 'CA', '90803', 'US', 'home', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15'),
+(900006, '4721 E 2nd St', 'Suite 100', 'Long Beach', 'CA', '90803', 'US', 'business', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15'),
+(900007, '425 Pine Ave', 'Apt 12', 'Long Beach', 'CA', '90802', 'US', 'home', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15'),
+(900008, '4721 E 2nd St', 'Suite 100', 'Long Beach', 'CA', '90803', 'US', 'business', 1, 1, '2025-09-15', '2025-09-15', '2025-09-15');
+GO
+SET IDENTITY_INSERT address OFF;
+GO
+PRINT '  Imported: address (8 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 4: INSERT CONTACT INFO
+-- ============================================================================
+PRINT 'Inserting contact info...';
+GO
+SET IDENTITY_INSERT contact_info ON;
+GO
+INSERT INTO contact_info (contact_id, contact_type, contact_value, contact_subtype, is_primary, is_verified, verification_date, can_contact, preferred_time, created_at, updated_at) VALUES 
+(900001, 'email', 'emily.sanders@gmail.com', 'personal', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900002, 'phone', '562-555-1234', 'mobile', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900003, 'email', 'david.sanders@gmail.com', 'personal', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900004, 'phone', '562-555-1235', 'mobile', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900005, 'email', 'maria.rodriguez.lb@yahoo.com', 'personal', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900006, 'phone', '562-555-2345', 'mobile', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900007, 'email', 'isabel.rodriguez@hotmail.com', 'personal', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900008, 'phone', '562-555-2346', 'home', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900009, 'email', 'jason.nguyen@outlook.com', 'personal', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900010, 'phone', '562-555-3456', 'mobile', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900011, 'email', 'info@nguyencoastalcafe.com', 'business', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900012, 'phone', '562-555-3457', 'business', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900013, 'email', 'ethan.chen.ca@gmail.com', 'personal', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15'),
+(900014, 'phone', '562-555-4567', 'mobile', 1, 1, '2025-09-15', 1, NULL, '2025-09-15', '2025-09-15');
+GO
+SET IDENTITY_INSERT contact_info OFF;
+GO
+PRINT '  Imported: contact_info (14 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 5: INSERT CUSTOMERS (7 individual + 1 business)
+-- ============================================================================
+PRINT 'Inserting customers...';
+GO
+SET IDENTITY_INSERT customer ON;
+GO
+INSERT INTO customer (customer_id, first_name, last_name, middle_name, preferred_name, title, suffix, date_of_birth, gender, marital_status, tax_identifier, government_id, government_id_type, citizenship, customer_type, customer_status, customer_since, kyc_status, kyc_last_updated, risk_rating, language_preference, jack_henry_cif_number, silverlake_customer_id, created_at, updated_at, is_employee, naics_code, occupation, employer_name, business_name, inquiry_code, inside_code, sales_associate_code, class_code, vip_customer, full_name, is_deceased, branch_id, dba_name) VALUES 
+(900001, 'Emily', 'Sanders', 'Marie', 'Em', 'Ms.', NULL, '1985-03-15', 'F', 'Married', '555-12-3456', 'D5512345', 'Drivers License', 'United States', 'individual', 'active', '2018-06-10', 'complete', '2025-09-15', 'low', 'en', 'CIF900001', 'SLV-00900001', '2025-09-15', '2025-09-15', 0, NULL, 'Marketing Manager', 'Pacific Coast Marketing', NULL, 'INQ001', 'IN-A', 'SA-001', 'STANDARD', 0, 'Emily Sanders', 0, 913, NULL),
+(900002, 'David', 'Sanders', 'James', NULL, 'Mr.', NULL, '1983-07-22', 'M', 'Married', '555-12-3457', 'D5512346', 'Drivers License', 'United States', 'individual', 'active', '2018-06-10', 'complete', '2025-09-15', 'low', 'en', 'CIF900002', 'SLV-00900002', '2025-09-15', '2025-09-15', 0, NULL, 'Software Engineer', 'TechWave Solutions', NULL, 'INQ001', 'IN-A', 'SA-001', 'STANDARD', 0, 'David Sanders', 0, 913, NULL),
+(900003, 'Maria', 'Rodriguez', 'Elena', NULL, 'Ms.', NULL, '1978-11-08', 'F', 'Widowed', '555-23-4567', 'D5523456', 'Drivers License', 'United States', 'individual', 'active', '2015-02-20', 'complete', '2025-09-15', 'low', 'es', 'CIF900003', 'SLV-00900003', '2025-09-15', '2025-09-15', 0, NULL, 'Registered Nurse', 'Long Beach Memorial', NULL, 'INQ002', 'IN-B', 'SA-002', 'STANDARD', 0, 'Maria Rodriguez', 0, 905, NULL),
+(900004, 'Isabel', 'Rodriguez', NULL, NULL, 'Mrs.', NULL, '1952-05-14', 'F', 'Widowed', '555-23-4568', 'D5523457', 'Drivers License', 'United States', 'individual', 'active', '2015-02-20', 'complete', '2025-09-15', 'low', 'es', 'CIF900004', 'SLV-00900004', '2025-09-15', '2025-09-15', 0, NULL, 'Retired', NULL, NULL, 'INQ002', 'IN-B', 'SA-002', 'STANDARD', 0, 'Isabel Rodriguez', 0, 905, NULL),
+(900005, 'Jason', 'Nguyen', 'Thanh', NULL, 'Mr.', NULL, '1980-09-03', 'M', 'Single', '555-34-5678', 'D5534567', 'Drivers License', 'United States', 'individual', 'active', '2012-08-15', 'complete', '2025-09-15', 'low', 'en', 'CIF900005', 'SLV-00900005', '2025-09-15', '2025-09-15', 0, NULL, 'Business Owner', 'Self-Employed', NULL, 'INQ003', 'IN-C', 'SA-003', 'VIP-BUSINESS', 1, 'Jason Nguyen', 0, 901, NULL),
+(900006, NULL, NULL, NULL, NULL, NULL, NULL, '2012-08-15', NULL, NULL, '95-1234567', 'EIN951234567', 'EIN', 'United States', 'business', 'active', '2012-08-15', 'complete', '2025-09-15', 'medium', 'en', 'CIF900006', 'SLV-00900006', '2025-09-15', '2025-09-15', 0, '722515', NULL, NULL, 'Nguyen Coastal Cafe LLC', 'INQ003', 'IN-C', 'SA-003', 'BUSINESS', 0, 'Nguyen Coastal Cafe LLC', 0, 901, 'Coastal Cafe'),
+(900007, 'Ethan', 'Chen', 'Wei', NULL, 'Mr.', NULL, '1995-12-28', 'M', 'Single', '555-45-6789', 'D5545678', 'Drivers License', 'United States', 'individual', 'active', '2025-10-05', 'pending', '2025-10-05', 'medium', 'en', 'CIF900007', 'SLV-00900007', '2025-10-05', '2025-10-05', 0, NULL, 'Graduate Student', 'CSULB', NULL, 'INQ004', 'IN-D', 'SA-004', 'STANDARD', 0, 'Ethan Chen', 0, 914, NULL);
+GO
+SET IDENTITY_INSERT customer OFF;
+GO
+PRINT '  Imported: customer (7 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 6: INSERT HOUSEHOLDS
+-- ============================================================================
+PRINT 'Inserting households...';
+GO
+SET IDENTITY_INSERT household ON;
+GO
+INSERT INTO household (household_id, household_name, household_type, status, total_relationship_value, combined_annual_income, primary_branch_id, assigned_banker_id, risk_category, notes, created_at, updated_at) VALUES 
+(900001, 'Sanders Household', 'family', 'active', 385000.00, 185000.00, 913, NULL, 'low', 'Established household with mortgage', '2025-09-15', '2025-09-15'),
+(900002, 'Rodriguez Household', 'family', 'active', 95000.00, 82000.00, 905, NULL, 'low', 'Multi-generational household', '2025-09-15', '2025-09-15'),
+(900003, 'Nguyen Business Group', 'business', 'active', 175000.00, NULL, 901, NULL, 'medium', 'Personal and business banking', '2025-09-15', '2025-09-15');
+GO
+SET IDENTITY_INSERT household OFF;
+GO
+PRINT '  Imported: household (3 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 7: INSERT HOUSEHOLD MEMBERSHIPS
+-- ============================================================================
+PRINT 'Inserting household memberships...';
+GO
+SET IDENTITY_INSERT household_membership ON;
+GO
+INSERT INTO household_membership (membership_id, household_id, customer_id, relationship_role, is_primary_member, is_head_of_household, membership_start_date, membership_end_date, rollup_accounts, rollup_percentage, notes, created_at, updated_at, ownership_percentage, control_type) VALUES 
+(900001, 900001, 900001, 'primary_account_holder', 1, 1, '2018-06-10', NULL, 1, 100.00, NULL, '2025-09-15', '2025-09-15', 50.00, 'none'),
+(900002, 900001, 900002, 'spouse', 0, 0, '2018-06-10', NULL, 1, 100.00, NULL, '2025-09-15', '2025-09-15', 50.00, 'none'),
+(900003, 900002, 900003, 'primary_account_holder', 1, 1, '2015-02-20', NULL, 1, 100.00, NULL, '2025-09-15', '2025-09-15', 100.00, 'none'),
+(900004, 900002, 900004, 'parent', 0, 0, '2015-02-20', NULL, 1, 100.00, NULL, '2025-09-15', '2025-09-15', 0.00, 'none'),
+(900005, 900003, 900005, 'primary_business_entity', 1, 0, '2012-08-15', NULL, 1, 100.00, NULL, '2025-09-15', '2025-09-15', 100.00, 'majority_control'),
+(900006, 900003, 900006, 'affiliated_business', 0, 0, '2012-08-15', NULL, 1, 100.00, NULL, '2025-09-15', '2025-09-15', 100.00, 'majority_control');
+GO
+SET IDENTITY_INSERT household_membership OFF;
+GO
+PRINT '  Imported: household_membership (6 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 8: INSERT ENTITY_ADDRESS LINKS
+-- ============================================================================
+PRINT 'Inserting entity_address links...';
+GO
+SET IDENTITY_INSERT entity_address ON;
+GO
+INSERT INTO entity_address (entity_address_id, entity_type, entity_id, address_id, address_purpose, is_current, start_date, end_date, created_at, updated_at) VALUES 
+(900001, 'customer', 900001, 900001, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900002, 'customer', 900002, 900002, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900003, 'customer', 900003, 900003, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900004, 'customer', 900004, 900004, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900005, 'customer', 900005, 900005, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900006, 'customer', 900005, 900006, 'business', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900007, 'customer', 900006, 900008, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900008, 'customer', 900007, 900007, 'primary', 1, '2025-10-05', NULL, '2025-10-05', '2025-10-05');
+GO
+SET IDENTITY_INSERT entity_address OFF;
+GO
+PRINT '  Imported: entity_address (8 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 9: INSERT ENTITY_CONTACT LINKS
+-- ============================================================================
+PRINT 'Inserting entity_contact links...';
+GO
+SET IDENTITY_INSERT entity_contact ON;
+GO
+INSERT INTO entity_contact (entity_contact_id, entity_type, entity_id, contact_id, contact_purpose, is_current, start_date, end_date, created_at, updated_at) VALUES 
+(900001, 'customer', 900001, 900001, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900002, 'customer', 900001, 900002, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900003, 'customer', 900002, 900003, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900004, 'customer', 900002, 900004, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900005, 'customer', 900003, 900005, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900006, 'customer', 900003, 900006, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900007, 'customer', 900004, 900007, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900008, 'customer', 900004, 900008, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900009, 'customer', 900005, 900009, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900010, 'customer', 900005, 900010, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900011, 'customer', 900006, 900011, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900012, 'customer', 900006, 900012, 'primary', 1, '2025-09-15', NULL, '2025-09-15', '2025-09-15'),
+(900013, 'customer', 900007, 900013, 'primary', 1, '2025-10-05', NULL, '2025-10-05', '2025-10-05'),
+(900014, 'customer', 900007, 900014, 'primary', 1, '2025-10-05', NULL, '2025-10-05', '2025-10-05');
+GO
+SET IDENTITY_INSERT entity_contact OFF;
+GO
+PRINT '  Imported: entity_contact (14 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 10: INSERT ACCOUNTS (15 total)
+-- ============================================================================
+PRINT 'Inserting accounts...';
+GO
+SET IDENTITY_INSERT account ON;
+GO
+-- Emily Sanders: Checking, Money Market, Credit Card, Mortgage
+INSERT INTO account (account_id, account_number, account_type, account_subtype, account_status, balance, available_balance, currency, interest_rate, credit_limit, branch_id, product_code, opened_date, closed_date, last_transaction_date, maturity_date, jack_henry_account_id, silverlake_account_structure, created_at, updated_at, account_class, statement_cycle, statement_code_desc, average_balance, last_maintenance_date) VALUES 
+(910001, 'CHK910001', 'checking', 'premium_checking', 'active', 8542.33, 8542.33, 'USD', 0.01, NULL, 913, 'CHK-PREM-001', '2018-06-10', NULL, '2025-12-31', NULL, 'JH-CHK-910001', 'CORE_CHK_910001', '2025-09-15', '2025-12-31', NULL, NULL, NULL, 7850.00, NULL),
+(910002, 'SAV910002', 'savings', 'money_market', 'active', 45250.00, 45250.00, 'USD', 3.75, NULL, 913, 'SAV-MM-002', '2018-06-10', NULL, '2025-12-15', NULL, 'JH-SAV-910002', 'CORE_SAV_910002', '2025-09-15', '2025-12-15', NULL, NULL, NULL, 44500.00, NULL),
+(910003, 'CRD910003', 'credit_card', 'platinum_rewards', 'active', 2847.56, 12152.44, 'USD', 18.99, 15000.00, 913, 'CRD-PLAT-001', '2019-03-20', NULL, '2025-12-28', NULL, 'JH-CRD-910003', 'CARD_CRD_910003', '2025-09-15', '2025-12-28', NULL, NULL, NULL, NULL, NULL),
+(910004, 'MTG910004', 'mortgage', 'conventional_mortgage', 'active', 285420.18, 0.00, 'USD', 6.25, 350000.00, 913, 'MTG-CONV-001', '2020-09-15', NULL, '2025-12-01', '2050-09-15', 'JH-MTG-910004', 'LOAN_MTG_910004', '2025-09-15', '2025-12-01', NULL, NULL, NULL, NULL, NULL);
+
+-- Maria Rodriguez: Checking, Money Market, 6-month CD, Credit Card
+INSERT INTO account (account_id, account_number, account_type, account_subtype, account_status, balance, available_balance, currency, interest_rate, credit_limit, branch_id, product_code, opened_date, closed_date, last_transaction_date, maturity_date, jack_henry_account_id, silverlake_account_structure, created_at, updated_at, account_class, statement_cycle, statement_code_desc, average_balance, last_maintenance_date) VALUES 
+(910005, 'CHK910005', 'checking', 'standard_checking', 'active', 4215.87, 4215.87, 'USD', 0.01, NULL, 905, 'CHK-STD-001', '2015-02-20', NULL, '2025-12-30', NULL, 'JH-CHK-910005', 'CORE_CHK_910005', '2025-09-15', '2025-12-30', NULL, NULL, NULL, 3850.00, NULL),
+(910006, 'SAV910006', 'savings', 'money_market', 'active', 28750.00, 28750.00, 'USD', 3.75, NULL, 905, 'SAV-MM-002', '2015-02-20', NULL, '2025-12-15', NULL, 'JH-SAV-910006', 'CORE_SAV_910006', '2025-09-15', '2025-12-15', NULL, NULL, NULL, 27500.00, NULL),
+(910007, 'CD0910007', 'cd', '6_month_cd', 'active', 25187.50, 0.00, 'USD', 4.50, NULL, 905, 'CD-6MO-001', '2025-10-01', NULL, '2025-12-01', '2026-04-01', 'JH-CD-910007', 'TERM_CD_910007', '2025-10-01', '2025-12-01', NULL, NULL, NULL, NULL, NULL),
+(910008, 'CRD910008', 'credit_card', 'cashback_plus', 'active', 1285.42, 6714.58, 'USD', 22.49, 8000.00, 905, 'CRD-CASH-001', '2017-08-10', NULL, '2025-12-29', NULL, 'JH-CRD-910008', 'CARD_CRD_910008', '2025-09-15', '2025-12-29', NULL, NULL, NULL, NULL, NULL);
+
+-- Jason Nguyen Personal: Checking, Credit Card
+INSERT INTO account (account_id, account_number, account_type, account_subtype, account_status, balance, available_balance, currency, interest_rate, credit_limit, branch_id, product_code, opened_date, closed_date, last_transaction_date, maturity_date, jack_henry_account_id, silverlake_account_structure, created_at, updated_at, account_class, statement_cycle, statement_code_desc, average_balance, last_maintenance_date) VALUES 
+(910009, 'CHK910009', 'checking', 'premium_checking', 'active', 12450.00, 12450.00, 'USD', 0.01, NULL, 901, 'CHK-PREM-001', '2012-08-15', NULL, '2025-12-31', NULL, 'JH-CHK-910009', 'CORE_CHK_910009', '2025-09-15', '2025-12-31', NULL, NULL, NULL, 11500.00, NULL),
+(910010, 'CRD910010', 'credit_card', 'travel_rewards', 'active', 3215.80, 16784.20, 'USD', 19.99, 20000.00, 901, 'CRD-TRAV-001', '2014-05-10', NULL, '2025-12-27', NULL, 'JH-CRD-910010', 'CARD_CRD_910010', '2025-09-15', '2025-12-27', NULL, NULL, NULL, NULL, NULL);
+
+-- Nguyen Coastal Cafe Business: Checking, Savings, Credit Card
+INSERT INTO account (account_id, account_number, account_type, account_subtype, account_status, balance, available_balance, currency, interest_rate, credit_limit, branch_id, product_code, opened_date, closed_date, last_transaction_date, maturity_date, jack_henry_account_id, silverlake_account_structure, created_at, updated_at, account_class, statement_cycle, statement_code_desc, average_balance, last_maintenance_date) VALUES 
+(910011, 'CHK910011', 'checking', 'business_checking', 'active', 47825.64, 47825.64, 'USD', 0.01, NULL, 901, 'CHK-BUS-001', '2012-08-15', NULL, '2025-12-31', NULL, 'JH-CHK-910011', 'CORE_CHK_910011', '2025-09-15', '2025-12-31', NULL, NULL, NULL, 42500.00, NULL),
+(910012, 'SAV910012', 'savings', 'premium_savings', 'active', 85000.00, 85000.00, 'USD', 2.50, NULL, 901, 'SAV-PREM-001', '2015-03-01', NULL, '2025-12-15', NULL, 'JH-SAV-910012', 'CORE_SAV_910012', '2025-09-15', '2025-12-15', NULL, NULL, NULL, 82000.00, NULL),
+(910013, 'CRD910013', 'credit_card', 'business_rewards', 'active', 8542.30, 41457.70, 'USD', 17.99, 50000.00, 901, 'CRD-BUS-001', '2016-01-15', NULL, '2025-12-30', NULL, 'JH-CRD-910013', 'CARD_CRD_910013', '2025-09-15', '2025-12-30', NULL, NULL, NULL, NULL, NULL);
+
+-- Ethan Chen: Checking, Starter Credit Card
+INSERT INTO account (account_id, account_number, account_type, account_subtype, account_status, balance, available_balance, currency, interest_rate, credit_limit, branch_id, product_code, opened_date, closed_date, last_transaction_date, maturity_date, jack_henry_account_id, silverlake_account_structure, created_at, updated_at, account_class, statement_cycle, statement_code_desc, average_balance, last_maintenance_date) VALUES 
+(910014, 'CHK910014', 'checking', 'standard_checking', 'active', 1825.42, 1825.42, 'USD', 0.01, NULL, 914, 'CHK-STD-001', '2025-10-05', NULL, '2025-12-28', NULL, 'JH-CHK-910014', 'CORE_CHK_910014', '2025-10-05', '2025-12-28', NULL, NULL, NULL, 1500.00, NULL),
+(910015, 'CRD910015', 'credit_card', 'standard_credit', 'active', 425.18, 1574.82, 'USD', 24.99, 2000.00, 914, 'CRD-STD-001', '2025-10-10', NULL, '2025-12-20', NULL, 'JH-CRD-910015', 'CARD_CRD_910015', '2025-10-10', '2025-12-20', NULL, NULL, NULL, NULL, NULL);
+GO
+SET IDENTITY_INSERT account OFF;
+GO
+PRINT '  Imported: account (15 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 11: INSERT ACCOUNT OWNERSHIP
+-- ============================================================================
+PRINT 'Inserting account ownership...';
+GO
+SET IDENTITY_INSERT account_ownership ON;
+GO
+INSERT INTO account_ownership (ownership_id, account_id, customer_id, ownership_type, ownership_percentage, is_primary_owner, signing_authority, can_view_statements, can_make_transactions, transaction_limit, relationship_start_date, relationship_end_date, created_at, updated_at) VALUES 
+(910001, 910001, 900001, 'primary', 100.00, 1, 1, 1, 1, NULL, '2018-06-10', NULL, '2025-09-15', '2025-09-15'),
+(910002, 910002, 900001, 'primary', 100.00, 1, 1, 1, 1, NULL, '2018-06-10', NULL, '2025-09-15', '2025-09-15'),
+(910003, 910003, 900001, 'primary', 100.00, 1, 1, 1, 1, NULL, '2019-03-20', NULL, '2025-09-15', '2025-09-15'),
+(910004, 910004, 900001, 'joint', 50.00, 1, 1, 1, 1, NULL, '2020-09-15', NULL, '2025-09-15', '2025-09-15'),
+(910005, 910004, 900002, 'joint', 50.00, 0, 1, 1, 1, NULL, '2020-09-15', NULL, '2025-09-15', '2025-09-15'),
+(910006, 910005, 900003, 'primary', 100.00, 1, 1, 1, 1, NULL, '2015-02-20', NULL, '2025-09-15', '2025-09-15'),
+(910007, 910006, 900003, 'primary', 100.00, 1, 1, 1, 1, NULL, '2015-02-20', NULL, '2025-09-15', '2025-09-15'),
+(910008, 910007, 900003, 'primary', 100.00, 1, 1, 1, 1, NULL, '2025-10-01', NULL, '2025-10-01', '2025-10-01'),
+(910009, 910008, 900003, 'primary', 100.00, 1, 1, 1, 1, NULL, '2017-08-10', NULL, '2025-09-15', '2025-09-15'),
+(910010, 910009, 900005, 'primary', 100.00, 1, 1, 1, 1, NULL, '2012-08-15', NULL, '2025-09-15', '2025-09-15'),
+(910011, 910010, 900005, 'primary', 100.00, 1, 1, 1, 1, NULL, '2014-05-10', NULL, '2025-09-15', '2025-09-15'),
+(910012, 910011, 900006, 'primary', 100.00, 1, 1, 1, 1, NULL, '2012-08-15', NULL, '2025-09-15', '2025-09-15'),
+(910013, 910012, 900006, 'primary', 100.00, 1, 1, 1, 1, NULL, '2015-03-01', NULL, '2025-09-15', '2025-09-15'),
+(910014, 910013, 900006, 'primary', 100.00, 1, 1, 1, 1, NULL, '2016-01-15', NULL, '2025-09-15', '2025-09-15'),
+(910015, 910011, 900005, 'authorized_signer', 0.00, 0, 1, 1, 1, NULL, '2012-08-15', NULL, '2025-09-15', '2025-09-15'),
+(910016, 910012, 900005, 'authorized_signer', 0.00, 0, 1, 1, 1, NULL, '2015-03-01', NULL, '2025-09-15', '2025-09-15'),
+(910017, 910013, 900005, 'authorized_signer', 0.00, 0, 1, 1, 1, NULL, '2016-01-15', NULL, '2025-09-15', '2025-09-15'),
+(910018, 910014, 900007, 'primary', 100.00, 1, 1, 1, 1, NULL, '2025-10-05', NULL, '2025-10-05', '2025-10-05'),
+(910019, 910015, 900007, 'primary', 100.00, 1, 1, 1, 1, NULL, '2025-10-10', NULL, '2025-10-10', '2025-10-10');
+GO
+SET IDENTITY_INSERT account_ownership OFF;
+GO
+PRINT '  Imported: account_ownership (19 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 12: INSERT ONLINE BANKING USERS
+-- ============================================================================
+PRINT 'Inserting online banking users...';
+GO
+SET IDENTITY_INSERT online_banking_user ON;
+GO
+INSERT INTO online_banking_user (online_user_id, customer_id, username, email, enrollment_date, last_login, is_active, authentication_method, mobile_enabled, bill_pay_enabled, external_transfer_enabled, wire_transfer_enabled, created_at, updated_at) VALUES 
+(900001, 900001, 'esanders', 'emily.sanders@gmail.com', '2018-06-15', '2025-12-31 14:22:00', 1, 'password_mfa', 1, 1, 1, 0, '2025-09-15', '2025-12-31'),
+(900002, 900003, 'mrodriguez', 'maria.rodriguez.lb@yahoo.com', '2015-03-01', '2025-12-30 09:15:00', 1, 'password_mfa', 1, 1, 1, 0, '2025-09-15', '2025-12-30'),
+(900003, 900005, 'jnguyen', 'jason.nguyen@outlook.com', '2012-09-01', '2025-12-31 16:45:00', 1, 'password_mfa', 1, 1, 1, 1, '2025-09-15', '2025-12-31'),
+(900004, 900007, 'echen', 'ethan.chen.ca@gmail.com', '2025-10-05', '2025-12-28 11:30:00', 1, 'password', 1, 0, 0, 0, '2025-10-05', '2025-12-28');
+GO
+SET IDENTITY_INSERT online_banking_user OFF;
+GO
+PRINT '  Imported: online_banking_user (4 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 13: INSERT DEBIT CARD LIMIT PROFILES & DEBIT CARDS
+-- ============================================================================
+PRINT 'Inserting debit cards...';
+GO
+SET IDENTITY_INSERT debit_card_limit_profile ON;
+GO
+INSERT INTO debit_card_limit_profile (profile_id, profile_name, daily_atm_limit, daily_pos_limit, single_transaction_limit, is_default, created_at, updated_at) VALUES 
+(900001, 'Standard Personal', 500.00, 2500.00, 1000.00, 1, '2025-09-15', '2025-09-15'),
+(900002, 'Premium Personal', 1000.00, 5000.00, 2500.00, 0, '2025-09-15', '2025-09-15'),
+(900003, 'Business Standard', 2000.00, 10000.00, 5000.00, 0, '2025-09-15', '2025-09-15');
+GO
+SET IDENTITY_INSERT debit_card_limit_profile OFF;
+GO
+SET IDENTITY_INSERT debit_card ON;
+GO
+INSERT INTO debit_card (card_id, account_id, card_number_masked, card_status, issue_date, expiration_date, cardholder_name, limit_profile_id, pin_set, contactless_enabled, international_enabled, created_at, updated_at) VALUES 
+(900001, 910001, '****1234', 'active', '2023-06-10', '2027-06-30', 'EMILY SANDERS', 900002, 1, 1, 1, '2025-09-15', '2025-09-15'),
+(900002, 910005, '****2345', 'active', '2022-02-20', '2026-02-28', 'MARIA RODRIGUEZ', 900001, 1, 1, 0, '2025-09-15', '2025-09-15'),
+(900003, 910009, '****3456', 'active', '2024-08-15', '2028-08-31', 'JASON NGUYEN', 900002, 1, 1, 1, '2025-09-15', '2025-09-15'),
+(900004, 910011, '****4567', 'active', '2024-08-15', '2028-08-31', 'NGUYEN COASTAL CAFE', 900003, 1, 1, 0, '2025-09-15', '2025-09-15'),
+(900005, 910014, '****5678', 'active', '2025-10-05', '2029-10-31', 'ETHAN CHEN', 900001, 1, 1, 0, '2025-10-05', '2025-10-05');
+GO
+SET IDENTITY_INSERT debit_card OFF;
+GO
+PRINT '  Imported: debit_card_limit_profile (3 rows), debit_card (5 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 14: INSERT NOTE FOR ETHAN CHEN (KYC PENDING)
+-- ============================================================================
+PRINT 'Inserting notes...';
+GO
+SET IDENTITY_INSERT note ON;
+GO
+INSERT INTO note (note_id, entity_type, entity_id, category_id, title, content, priority, status, visibility, is_sensitive, is_actionable, action_due_date, action_assigned_to, created_by, modified_by, created_at, updated_at, deleted_at) VALUES 
+(900001, 'customer', 900007, 3, 'KYC Verification Pending', 'Customer opened account 2025-10-05. Additional documentation required: (1) Second form of ID, (2) Proof of enrollment at CSULB. Follow up by 2025-11-05.', 'high', 'open', 'internal', 1, 1, '2025-11-05', NULL, 1, NULL, '2025-10-05 10:30:00', '2025-10-05 10:30:00', NULL);
+GO
+SET IDENTITY_INSERT note OFF;
+GO
+PRINT '  Imported: note (1 row)';
+GO
+
+-- ============================================================================
+-- PHASE 15: INSERT FINANCIAL TRANSACTIONS (~300 transactions)
+-- ============================================================================
+PRINT 'Inserting financial transactions...';
+GO
+SET IDENTITY_INSERT financial_transaction ON;
+GO
+
+-- ============================================================================
+-- EMILY SANDERS - Account 910001 (Checking) - Bi-weekly payroll, spending, mortgage
+-- ============================================================================
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+-- October 2025
+(920001, 910001, 3485.62, 'DD', 'credit', 'posted', '2025-10-01', '2025-10-01', 'PAYROLL PACIFIC COAST MKT', 'DD100101', 'Pacific Coast Marketing', NULL, 17, NULL, NULL, NULL, 7250.00, 7250.00, 'jack_henry', NULL, NULL, '2025-10-01', '2025-10-01'),
+(920002, 910001, -2485.50, 'ACH', 'debit', 'posted', '2025-10-01', '2025-10-01', 'MORTGAGE PMT CLIENTIQ BANK', 'MTG100101', NULL, NULL, 11, NULL, 910004, NULL, 4764.50, 4764.50, 'jack_henry', NULL, NULL, '2025-10-01', '2025-10-01'),
+(920003, 910001, -156.42, 'POS', 'debit', 'posted', '2025-10-03', '2025-10-03', 'RALPHS GROCERY #1234', 'POS100301', 'Ralphs', '5411', 4, NULL, NULL, NULL, 4608.08, 4608.08, 'jack_henry', NULL, NULL, '2025-10-03', '2025-10-03'),
+(920004, 910001, -45.00, 'POS', 'debit', 'posted', '2025-10-05', '2025-10-05', 'SHELL OIL 57442', 'POS100501', 'Shell', '5541', 6, NULL, NULL, NULL, 4563.08, 4563.08, 'jack_henry', NULL, NULL, '2025-10-05', '2025-10-05'),
+(920005, 910001, -89.99, 'ACH', 'debit', 'posted', '2025-10-07', '2025-10-07', 'SPECTRUM CABLE', 'ACH100701', 'Spectrum', NULL, 2, NULL, NULL, NULL, 4473.09, 4473.09, 'jack_henry', NULL, NULL, '2025-10-07', '2025-10-07'),
+(920006, 910001, -124.50, 'POS', 'debit', 'posted', '2025-10-10', '2025-10-10', 'TARGET T-2145', 'POS101001', 'Target', '5311', 3, NULL, NULL, NULL, 4348.59, 4348.59, 'jack_henry', NULL, NULL, '2025-10-10', '2025-10-10'),
+(920007, 910001, 3485.62, 'DD', 'credit', 'posted', '2025-10-15', '2025-10-15', 'PAYROLL PACIFIC COAST MKT', 'DD101501', 'Pacific Coast Marketing', NULL, 17, NULL, NULL, NULL, 7834.21, 7834.21, 'jack_henry', NULL, NULL, '2025-10-15', '2025-10-15'),
+(920008, 910001, -142.87, 'POS', 'debit', 'posted', '2025-10-17', '2025-10-17', 'COSTCO WHSE #1089', 'POS101701', 'Costco', '5300', 3, NULL, NULL, NULL, 7691.34, 7691.34, 'jack_henry', NULL, NULL, '2025-10-17', '2025-10-17'),
+(920009, 910001, -200.00, 'ATM', 'debit', 'posted', '2025-10-20', '2025-10-20', 'ATM WITHDRAWAL CLIENTIQ', 'ATM102001', NULL, NULL, 10, NULL, NULL, NULL, 7491.34, 7491.34, 'jack_henry', NULL, NULL, '2025-10-20', '2025-10-20'),
+(920010, 910001, -178.42, 'POS', 'debit', 'posted', '2025-10-22', '2025-10-22', 'AMAZON.COM*1A2B3C', 'POS102201', 'Amazon', '5999', 3, NULL, NULL, NULL, 7312.92, 7312.92, 'jack_henry', NULL, NULL, '2025-10-22', '2025-10-22'),
+(920011, 910001, -52.18, 'POS', 'debit', 'posted', '2025-10-25', '2025-10-25', 'STARBUCKS STORE 12456', 'POS102501', 'Starbucks', '5814', 4, NULL, NULL, NULL, 7260.74, 7260.74, 'jack_henry', NULL, NULL, '2025-10-25', '2025-10-25'),
+(920012, 910001, 3485.62, 'DD', 'credit', 'posted', '2025-10-31', '2025-10-31', 'PAYROLL PACIFIC COAST MKT', 'DD103101', 'Pacific Coast Marketing', NULL, 17, NULL, NULL, NULL, 10746.36, 10746.36, 'jack_henry', NULL, NULL, '2025-10-31', '2025-10-31'),
+-- November 2025
+(920013, 910001, -2485.50, 'ACH', 'debit', 'posted', '2025-11-01', '2025-11-01', 'MORTGAGE PMT CLIENTIQ BANK', 'MTG110101', NULL, NULL, 11, NULL, 910004, NULL, 8260.86, 8260.86, 'jack_henry', NULL, NULL, '2025-11-01', '2025-11-01'),
+(920014, 910001, -165.23, 'POS', 'debit', 'posted', '2025-11-03', '2025-11-03', 'RALPHS GROCERY #1234', 'POS110301', 'Ralphs', '5411', 4, NULL, NULL, NULL, 8095.63, 8095.63, 'jack_henry', NULL, NULL, '2025-11-03', '2025-11-03'),
+(920015, 910001, -52.00, 'POS', 'debit', 'posted', '2025-11-06', '2025-11-06', 'CHEVRON 95847', 'POS110601', 'Chevron', '5541', 6, NULL, NULL, NULL, 8043.63, 8043.63, 'jack_henry', NULL, NULL, '2025-11-06', '2025-11-06'),
+(920016, 910001, -89.99, 'ACH', 'debit', 'posted', '2025-11-07', '2025-11-07', 'SPECTRUM CABLE', 'ACH110701', 'Spectrum', NULL, 2, NULL, NULL, NULL, 7953.64, 7953.64, 'jack_henry', NULL, NULL, '2025-11-07', '2025-11-07'),
+(920017, 910001, 3485.62, 'DD', 'credit', 'posted', '2025-11-15', '2025-11-15', 'PAYROLL PACIFIC COAST MKT', 'DD111501', 'Pacific Coast Marketing', NULL, 17, NULL, NULL, NULL, 11439.26, 11439.26, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920018, 910001, -245.00, 'POS', 'debit', 'posted', '2025-11-18', '2025-11-18', 'NORDSTROM #445', 'POS111801', 'Nordstrom', '5311', 3, NULL, NULL, NULL, 11194.26, 11194.26, 'jack_henry', NULL, NULL, '2025-11-18', '2025-11-18'),
+(920019, 910001, -300.00, 'ATM', 'debit', 'posted', '2025-11-22', '2025-11-22', 'ATM WITHDRAWAL CLIENTIQ', 'ATM112201', NULL, NULL, 10, NULL, NULL, NULL, 10894.26, 10894.26, 'jack_henry', NULL, NULL, '2025-11-22', '2025-11-22'),
+(920020, 910001, -187.54, 'POS', 'debit', 'posted', '2025-11-25', '2025-11-25', 'WHOLE FOODS MKT', 'POS112501', 'Whole Foods', '5411', 4, NULL, NULL, NULL, 10706.72, 10706.72, 'jack_henry', NULL, NULL, '2025-11-25', '2025-11-25'),
+(920021, 910001, 3485.62, 'DD', 'credit', 'posted', '2025-11-30', '2025-11-30', 'PAYROLL PACIFIC COAST MKT', 'DD113001', 'Pacific Coast Marketing', NULL, 17, NULL, NULL, NULL, 14192.34, 14192.34, 'jack_henry', NULL, NULL, '2025-11-30', '2025-11-30'),
+-- December 2025
+(920022, 910001, -2485.50, 'ACH', 'debit', 'posted', '2025-12-01', '2025-12-01', 'MORTGAGE PMT CLIENTIQ BANK', 'MTG120101', NULL, NULL, 11, NULL, 910004, NULL, 11706.84, 11706.84, 'jack_henry', NULL, NULL, '2025-12-01', '2025-12-01'),
+(920023, 910001, -178.65, 'POS', 'debit', 'posted', '2025-12-04', '2025-12-04', 'RALPHS GROCERY #1234', 'POS120401', 'Ralphs', '5411', 4, NULL, NULL, NULL, 11528.19, 11528.19, 'jack_henry', NULL, NULL, '2025-12-04', '2025-12-04'),
+(920024, 910001, -89.99, 'ACH', 'debit', 'posted', '2025-12-07', '2025-12-07', 'SPECTRUM CABLE', 'ACH120701', 'Spectrum', NULL, 2, NULL, NULL, NULL, 11438.20, 11438.20, 'jack_henry', NULL, NULL, '2025-12-07', '2025-12-07'),
+(920025, 910001, -425.00, 'POS', 'debit', 'posted', '2025-12-10', '2025-12-10', 'BEST BUY 00512', 'POS121001', 'Best Buy', '5732', 3, NULL, NULL, NULL, 11013.20, 11013.20, 'jack_henry', NULL, NULL, '2025-12-10', '2025-12-10'),
+(920026, 910001, 3485.62, 'DD', 'credit', 'posted', '2025-12-15', '2025-12-15', 'PAYROLL PACIFIC COAST MKT', 'DD121501', 'Pacific Coast Marketing', NULL, 17, NULL, NULL, NULL, 14498.82, 14498.82, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920027, 910001, -312.45, 'POS', 'debit', 'posted', '2025-12-18', '2025-12-18', 'MACYS #1247', 'POS121801', 'Macys', '5311', 3, NULL, NULL, NULL, 14186.37, 14186.37, 'jack_henry', NULL, NULL, '2025-12-18', '2025-12-18'),
+(920028, 910001, -500.00, 'ATM', 'debit', 'posted', '2025-12-20', '2025-12-20', 'ATM WITHDRAWAL CLIENTIQ', 'ATM122001', NULL, NULL, 10, NULL, NULL, NULL, 13686.37, 13686.37, 'jack_henry', NULL, NULL, '2025-12-20', '2025-12-20'),
+(920029, 910001, -245.87, 'POS', 'debit', 'posted', '2025-12-23', '2025-12-23', 'COSTCO WHSE #1089', 'POS122301', 'Costco', '5300', 3, NULL, NULL, NULL, 13440.50, 13440.50, 'jack_henry', NULL, NULL, '2025-12-23', '2025-12-23'),
+(920030, 910001, 3485.62, 'DD', 'credit', 'posted', '2025-12-31', '2025-12-31', 'PAYROLL PACIFIC COAST MKT', 'DD123101', 'Pacific Coast Marketing', NULL, 17, NULL, NULL, NULL, 16926.12, 16926.12, 'jack_henry', NULL, NULL, '2025-12-31', '2025-12-31');
+GO
+
+-- Emily Sanders Credit Card (910003) - Monthly payment from checking
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+(920031, 910003, -850.00, 'PMT', 'credit', 'posted', '2025-10-15', '2025-10-15', 'PAYMENT THANK YOU', 'PMT101501', NULL, NULL, 16, NULL, 910001, NULL, 2150.00, 12850.00, 'jack_henry', NULL, NULL, '2025-10-15', '2025-10-15'),
+(920032, 910003, 245.67, 'PUR', 'debit', 'posted', '2025-10-18', '2025-10-18', 'AMAZON.COM*2X3Y4Z', 'PUR101801', 'Amazon', '5999', 3, NULL, NULL, NULL, 2395.67, 12604.33, 'jack_henry', NULL, NULL, '2025-10-18', '2025-10-18'),
+(920033, 910003, 87.45, 'PUR', 'debit', 'posted', '2025-10-25', '2025-10-25', 'TRADER JOES #234', 'PUR102501', 'Trader Joes', '5411', 4, NULL, NULL, NULL, 2483.12, 12516.88, 'jack_henry', NULL, NULL, '2025-10-25', '2025-10-25'),
+(920034, 910003, -900.00, 'PMT', 'credit', 'posted', '2025-11-15', '2025-11-15', 'PAYMENT THANK YOU', 'PMT111501', NULL, NULL, 16, NULL, 910001, NULL, 1583.12, 13416.88, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920035, 910003, 356.89, 'PUR', 'debit', 'posted', '2025-11-22', '2025-11-22', 'DELTA AIR LINES', 'PUR112201', 'Delta', '4511', 5, NULL, NULL, NULL, 1940.01, 13059.99, 'jack_henry', NULL, NULL, '2025-11-22', '2025-11-22'),
+(920036, 910003, 124.55, 'PUR', 'debit', 'posted', '2025-11-28', '2025-11-28', 'WILLIAMS SONOMA', 'PUR112801', 'Williams Sonoma', '5719', 3, NULL, NULL, NULL, 2064.56, 12935.44, 'jack_henry', NULL, NULL, '2025-11-28', '2025-11-28'),
+(920037, 910003, -800.00, 'PMT', 'credit', 'posted', '2025-12-15', '2025-12-15', 'PAYMENT THANK YOU', 'PMT121501', NULL, NULL, 16, NULL, 910001, NULL, 1264.56, 13735.44, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920038, 910003, 425.00, 'PUR', 'debit', 'posted', '2025-12-20', '2025-12-20', 'APPLE STORE #R123', 'PUR122001', 'Apple', '5732', 3, NULL, NULL, NULL, 1689.56, 13310.44, 'jack_henry', NULL, NULL, '2025-12-20', '2025-12-20'),
+(920039, 910003, 158.00, 'PUR', 'debit', 'posted', '2025-12-28', '2025-12-28', 'CHEESECAKE FACTORY', 'PUR122801', 'Cheesecake Factory', '5812', 4, NULL, NULL, NULL, 1847.56, 13152.44, 'jack_henry', NULL, NULL, '2025-12-28', '2025-12-28');
+GO
+
+-- ============================================================================
+-- MARIA RODRIGUEZ - Account 910005 (Checking) - Bi-weekly nursing payroll
+-- ============================================================================
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+-- October 2025
+(920040, 910005, 2847.35, 'DD', 'credit', 'posted', '2025-10-01', '2025-10-01', 'PAYROLL LB MEMORIAL HOSP', 'DD100102', 'Long Beach Memorial', NULL, 17, NULL, NULL, NULL, 5200.00, 5200.00, 'jack_henry', NULL, NULL, '2025-10-01', '2025-10-01'),
+(920041, 910005, -125.42, 'POS', 'debit', 'posted', '2025-10-03', '2025-10-03', 'FOOD 4 LESS #2156', 'POS100302', 'Food 4 Less', '5411', 4, NULL, NULL, NULL, 5074.58, 5074.58, 'jack_henry', NULL, NULL, '2025-10-03', '2025-10-03'),
+(920042, 910005, -65.00, 'ACH', 'debit', 'posted', '2025-10-05', '2025-10-05', 'SOCAL EDISON', 'ACH100502', 'SoCal Edison', NULL, 2, NULL, NULL, NULL, 5009.58, 5009.58, 'jack_henry', NULL, NULL, '2025-10-05', '2025-10-05'),
+(920043, 910005, -42.50, 'POS', 'debit', 'posted', '2025-10-08', '2025-10-08', 'ARCO #45892', 'POS100802', 'Arco', '5541', 6, NULL, NULL, NULL, 4967.08, 4967.08, 'jack_henry', NULL, NULL, '2025-10-08', '2025-10-08'),
+(920044, 910005, 2847.35, 'DD', 'credit', 'posted', '2025-10-15', '2025-10-15', 'PAYROLL LB MEMORIAL HOSP', 'DD101502', 'Long Beach Memorial', NULL, 17, NULL, NULL, NULL, 7814.43, 7814.43, 'jack_henry', NULL, NULL, '2025-10-15', '2025-10-15'),
+(920045, 910005, -134.87, 'POS', 'debit', 'posted', '2025-10-18', '2025-10-18', 'TARGET T-2145', 'POS101802', 'Target', '5311', 3, NULL, NULL, NULL, 7679.56, 7679.56, 'jack_henry', NULL, NULL, '2025-10-18', '2025-10-18'),
+(920046, 910005, -150.00, 'ATM', 'debit', 'posted', '2025-10-22', '2025-10-22', 'ATM WITHDRAWAL CLIENTIQ', 'ATM102202', NULL, NULL, 10, NULL, NULL, NULL, 7529.56, 7529.56, 'jack_henry', NULL, NULL, '2025-10-22', '2025-10-22'),
+(920047, 910005, 2847.35, 'DD', 'credit', 'posted', '2025-10-31', '2025-10-31', 'PAYROLL LB MEMORIAL HOSP', 'DD103102', 'Long Beach Memorial', NULL, 17, NULL, NULL, NULL, 10376.91, 10376.91, 'jack_henry', NULL, NULL, '2025-10-31', '2025-10-31'),
+-- November 2025
+(920048, 910005, -118.56, 'POS', 'debit', 'posted', '2025-11-02', '2025-11-02', 'FOOD 4 LESS #2156', 'POS110202', 'Food 4 Less', '5411', 4, NULL, NULL, NULL, 10258.35, 10258.35, 'jack_henry', NULL, NULL, '2025-11-02', '2025-11-02'),
+(920049, 910005, -65.00, 'ACH', 'debit', 'posted', '2025-11-05', '2025-11-05', 'SOCAL EDISON', 'ACH110502', 'SoCal Edison', NULL, 2, NULL, NULL, NULL, 10193.35, 10193.35, 'jack_henry', NULL, NULL, '2025-11-05', '2025-11-05'),
+(920050, 910005, 2847.35, 'DD', 'credit', 'posted', '2025-11-15', '2025-11-15', 'PAYROLL LB MEMORIAL HOSP', 'DD111502', 'Long Beach Memorial', NULL, 17, NULL, NULL, NULL, 13040.70, 13040.70, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920051, 910005, -89.45, 'POS', 'debit', 'posted', '2025-11-20', '2025-11-20', 'CVS PHARMACY #4521', 'POS112002', 'CVS', '5912', 3, NULL, NULL, NULL, 12951.25, 12951.25, 'jack_henry', NULL, NULL, '2025-11-20', '2025-11-20'),
+(920052, 910005, 2847.35, 'DD', 'credit', 'posted', '2025-11-30', '2025-11-30', 'PAYROLL LB MEMORIAL HOSP', 'DD113002', 'Long Beach Memorial', NULL, 17, NULL, NULL, NULL, 15798.60, 15798.60, 'jack_henry', NULL, NULL, '2025-11-30', '2025-11-30'),
+-- December 2025
+(920053, 910005, -142.33, 'POS', 'debit', 'posted', '2025-12-03', '2025-12-03', 'FOOD 4 LESS #2156', 'POS120302', 'Food 4 Less', '5411', 4, NULL, NULL, NULL, 15656.27, 15656.27, 'jack_henry', NULL, NULL, '2025-12-03', '2025-12-03'),
+(920054, 910005, -65.00, 'ACH', 'debit', 'posted', '2025-12-05', '2025-12-05', 'SOCAL EDISON', 'ACH120502', 'SoCal Edison', NULL, 2, NULL, NULL, NULL, 15591.27, 15591.27, 'jack_henry', NULL, NULL, '2025-12-05', '2025-12-05'),
+(920055, 910005, 2847.35, 'DD', 'credit', 'posted', '2025-12-15', '2025-12-15', 'PAYROLL LB MEMORIAL HOSP', 'DD121502', 'Long Beach Memorial', NULL, 17, NULL, NULL, NULL, 18438.62, 18438.62, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920056, 910005, -200.00, 'ATM', 'debit', 'posted', '2025-12-20', '2025-12-20', 'ATM WITHDRAWAL CLIENTIQ', 'ATM122002', NULL, NULL, 10, NULL, NULL, NULL, 18238.62, 18238.62, 'jack_henry', NULL, NULL, '2025-12-20', '2025-12-20'),
+(920057, 910005, -175.45, 'POS', 'debit', 'posted', '2025-12-24', '2025-12-24', 'TARGET T-2145', 'POS122402', 'Target', '5311', 3, NULL, NULL, NULL, 18063.17, 18063.17, 'jack_henry', NULL, NULL, '2025-12-24', '2025-12-24'),
+(920058, 910005, 2847.35, 'DD', 'credit', 'posted', '2025-12-31', '2025-12-31', 'PAYROLL LB MEMORIAL HOSP', 'DD123102', 'Long Beach Memorial', NULL, 17, NULL, NULL, NULL, 20910.52, 20910.52, 'jack_henry', NULL, NULL, '2025-12-31', '2025-12-31');
+GO
+
+-- Maria CD Interest (910007) - Monthly interest credits
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+(920059, 910007, 25000.00, 'DEP', 'credit', 'posted', '2025-10-01', '2025-10-01', 'CD FUNDING TRANSFER', 'DEP100107', NULL, NULL, 7, NULL, 910006, NULL, 25000.00, 0.00, 'jack_henry', NULL, NULL, '2025-10-01', '2025-10-01'),
+(920060, 910007, 93.75, 'INT', 'credit', 'posted', '2025-11-01', '2025-11-01', 'INTEREST CREDIT 6MO CD', 'INT110107', NULL, NULL, 1, NULL, NULL, NULL, 25093.75, 0.00, 'jack_henry', NULL, NULL, '2025-11-01', '2025-11-01'),
+(920061, 910007, 93.75, 'INT', 'credit', 'posted', '2025-12-01', '2025-12-01', 'INTEREST CREDIT 6MO CD', 'INT120107', NULL, NULL, 1, NULL, NULL, NULL, 25187.50, 0.00, 'jack_henry', NULL, NULL, '2025-12-01', '2025-12-01');
+GO
+
+-- Maria Credit Card (910008) - Moderate spend + monthly payment
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+(920062, 910008, 85.42, 'PUR', 'debit', 'posted', '2025-10-05', '2025-10-05', 'ULTA BEAUTY #1523', 'PUR100508', 'Ulta Beauty', '5977', 3, NULL, NULL, NULL, 1285.42, 6714.58, 'jack_henry', NULL, NULL, '2025-10-05', '2025-10-05'),
+(920063, 910008, -400.00, 'PMT', 'credit', 'posted', '2025-10-15', '2025-10-15', 'PAYMENT THANK YOU', 'PMT101508', NULL, NULL, 16, NULL, 910005, NULL, 885.42, 7114.58, 'jack_henry', NULL, NULL, '2025-10-15', '2025-10-15'),
+(920064, 910008, 125.67, 'PUR', 'debit', 'posted', '2025-10-22', '2025-10-22', 'ROSS DRESS FOR LESS', 'PUR102208', 'Ross', '5651', 3, NULL, NULL, NULL, 1011.09, 6988.91, 'jack_henry', NULL, NULL, '2025-10-22', '2025-10-22'),
+(920065, 910008, -400.00, 'PMT', 'credit', 'posted', '2025-11-15', '2025-11-15', 'PAYMENT THANK YOU', 'PMT111508', NULL, NULL, 16, NULL, 910005, NULL, 611.09, 7388.91, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920066, 910008, 156.33, 'PUR', 'debit', 'posted', '2025-11-25', '2025-11-25', 'TARGET T-2145', 'PUR112508', 'Target', '5311', 3, NULL, NULL, NULL, 767.42, 7232.58, 'jack_henry', NULL, NULL, '2025-11-25', '2025-11-25'),
+(920067, 910008, -400.00, 'PMT', 'credit', 'posted', '2025-12-15', '2025-12-15', 'PAYMENT THANK YOU', 'PMT121508', NULL, NULL, 16, NULL, 910005, NULL, 367.42, 7632.58, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920068, 910008, 217.00, 'PUR', 'debit', 'posted', '2025-12-22', '2025-12-22', 'KOHLS #1456', 'PUR122208', 'Kohls', '5311', 3, NULL, NULL, NULL, 584.42, 7415.58, 'jack_henry', NULL, NULL, '2025-12-22', '2025-12-22');
+GO
+, NULL, 5, NULL, 910011, NULL, 24012.50, 24012.50, 'jack_henry', NULL, NULL, '2025-12-01', '2025-12-01'),
+(920078, 910009, -85.00, 'ACH', 'debit', 'posted', '2025-12-10', '2025-12-10', 'LA FITNESS', 'ACH121009', 'LA Fitness', NULL, 2, NULL, NULL, NULL, 23927.50, 23927.50, 'jack_henry', NULL, NULL, '2025-12-10', '2025-12-10'),
+(920079, 910009, -165.00, 'POS', 'debit', 'posted', '2025-12-18', '2025-12-18', 'WHOLE FOODS MKT', 'POS121809', 'Whole Foods', '5411', 4, NULL, NULL, NULL, 23762.50, 23762.50, 'jack_henry', NULL, NULL, '2025-12-18', '2025-12-18'),
+(920080, 910009, -400.00, 'ATM', 'debit', 'posted', '2025-12-24', '2025-12-24', 'ATM WITHDRAWAL CLIENTIQ', 'ATM122409', NULL, NULL, 10, NULL, NULL, NULL, 23362.50, 23362.50, 'jack_henry', NULL, NULL, '2025-12-24', '2025-12-24');
+GO
+
+-- Jason Personal Credit Card (910010)
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+(920081, 910010, 425.00, 'PUR', 'debit', 'posted', '2025-10-08', '2025-10-08', 'UNITED AIRLINES', 'PUR100810', 'United Airlines', '4511', 5, NULL, NULL, NULL, 2425.00, 17575.00, 'jack_henry', NULL, NULL, '2025-10-08', '2025-10-08'),
+(920082, 910010, -1000.00, 'PMT', 'credit', 'posted', '2025-10-15', '2025-10-15', 'PAYMENT THANK YOU', 'PMT101510', NULL, NULL, 16, NULL, 910009, NULL, 1425.00, 18575.00, 'jack_henry', NULL, NULL, '2025-10-15', '2025-10-15'),
+(920083, 910010, 285.00, 'PUR', 'debit', 'posted', '2025-10-25', '2025-10-25', 'MARRIOTT HOTELS', 'PUR102510', 'Marriott', '7011', 5, NULL, NULL, NULL, 1710.00, 18290.00, 'jack_henry', NULL, NULL, '2025-10-25', '2025-10-25'),
+(920084, 910010, -800.00, 'PMT', 'credit', 'posted', '2025-11-15', '2025-11-15', 'PAYMENT THANK YOU', 'PMT111510', NULL, NULL, 16, NULL, 910009, NULL, 910.00, 19090.00, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920085, 910010, 345.80, 'PUR', 'debit', 'posted', '2025-11-22', '2025-11-22', 'SOUTHWEST AIR', 'PUR112210', 'Southwest', '4511', 5, NULL, NULL, NULL, 1255.80, 18744.20, 'jack_henry', NULL, NULL, '2025-11-22', '2025-11-22'),
+(920086, 910010, -800.00, 'PMT', 'credit', 'posted', '2025-12-15', '2025-12-15', 'PAYMENT THANK YOU', 'PMT121510', NULL, NULL, 16, NULL, 910009, NULL, 455.80, 19544.20, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920087, 910010, 560.00, 'PUR', 'debit', 'posted', '2025-12-20', '2025-12-20', 'HILTON HOTELS', 'PUR122010', 'Hilton', '7011', 5, NULL, NULL, NULL, 1015.80, 18984.20, 'jack_henry', NULL, NULL, '2025-12-20', '2025-12-20');
+GO
+
+-- ============================================================================
+-- NGUYEN COASTAL CAFE BUSINESS - Account 910011 (Business Checking)
+-- Daily merchant settlements, vendor ACH, bi-weekly payroll, monthly rent
+-- ============================================================================
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+-- October 2025 - Week 1
+(920088, 910011, 2845.67, 'ACH', 'credit', 'posted', '2025-10-01', '2025-10-01', 'SQUARE INC SETTLEMENT', 'SQ100101', 'Square', NULL, 17, NULL, NULL, NULL, 48000.00, 48000.00, 'jack_henry', NULL, NULL, '2025-10-01', '2025-10-01'),
+(920089, 910011, -5000.00, 'XFR', 'debit', 'posted', '2025-10-01', '2025-10-01', 'OWNER DISTRIBUTION', 'XFR100101', NULL, NULL, 5, NULL, 910009, NULL, 43000.00, 43000.00, 'jack_henry', NULL, NULL, '2025-10-01', '2025-10-01'),
+(920090, 910011, -4500.00, 'ACH', 'debit', 'posted', '2025-10-01', '2025-10-01', 'RENT PMT BELMONT PROP', 'ACH100101', 'Belmont Properties', NULL, 11, NULL, NULL, NULL, 38500.00, 38500.00, 'jack_henry', NULL, NULL, '2025-10-01', '2025-10-01'),
+(920091, 910011, 3124.50, 'ACH', 'credit', 'posted', '2025-10-02', '2025-10-02', 'SQUARE INC SETTLEMENT', 'SQ100201', 'Square', NULL, 17, NULL, NULL, NULL, 41624.50, 41624.50, 'jack_henry', NULL, NULL, '2025-10-02', '2025-10-02'),
+(920092, 910011, 2956.33, 'ACH', 'credit', 'posted', '2025-10-03', '2025-10-03', 'SQUARE INC SETTLEMENT', 'SQ100301', 'Square', NULL, 17, NULL, NULL, NULL, 44580.83, 44580.83, 'jack_henry', NULL, NULL, '2025-10-03', '2025-10-03'),
+(920093, 910011, -1245.00, 'ACH', 'debit', 'posted', '2025-10-03', '2025-10-03', 'SYSCO FOODS VENDOR', 'ACH100301', 'Sysco', NULL, 14, NULL, NULL, NULL, 43335.83, 43335.83, 'jack_henry', NULL, NULL, '2025-10-03', '2025-10-03'),
+(920094, 910011, 3542.18, 'ACH', 'credit', 'posted', '2025-10-04', '2025-10-04', 'SQUARE INC SETTLEMENT', 'SQ100401', 'Square', NULL, 17, NULL, NULL, NULL, 46878.01, 46878.01, 'jack_henry', NULL, NULL, '2025-10-04', '2025-10-04'),
+(920095, 910011, 4125.90, 'ACH', 'credit', 'posted', '2025-10-05', '2025-10-05', 'SQUARE INC SETTLEMENT', 'SQ100501', 'Square', NULL, 17, NULL, NULL, NULL, 51003.91, 51003.91, 'jack_henry', NULL, NULL, '2025-10-05', '2025-10-05'),
+-- Week 2
+(920096, 910011, 2687.45, 'ACH', 'credit', 'posted', '2025-10-07', '2025-10-07', 'SQUARE INC SETTLEMENT', 'SQ100701', 'Square', NULL, 17, NULL, NULL, NULL, 53691.36, 53691.36, 'jack_henry', NULL, NULL, '2025-10-07', '2025-10-07'),
+(920097, 910011, 2845.00, 'ACH', 'credit', 'posted', '2025-10-08', '2025-10-08', 'SQUARE INC SETTLEMENT', 'SQ100801', 'Square', NULL, 17, NULL, NULL, NULL, 56536.36, 56536.36, 'jack_henry', NULL, NULL, '2025-10-08', '2025-10-08'),
+(920098, 910011, -8542.50, 'ACH', 'debit', 'posted', '2025-10-10', '2025-10-10', 'PAYROLL - 5 EMPLOYEES', 'PAY101001', 'ADP Payroll', NULL, 17, NULL, NULL, NULL, 47993.86, 47993.86, 'jack_henry', NULL, NULL, '2025-10-10', '2025-10-10'),
+(920099, 910011, -1125.00, 'ACH', 'debit', 'posted', '2025-10-10', '2025-10-10', 'SYSCO FOODS VENDOR', 'ACH101001', 'Sysco', NULL, 14, NULL, NULL, NULL, 46868.86, 46868.86, 'jack_henry', NULL, NULL, '2025-10-10', '2025-10-10'),
+(920100, 910011, 3245.67, 'ACH', 'credit', 'posted', '2025-10-11', '2025-10-11', 'SQUARE INC SETTLEMENT', 'SQ101101', 'Square', NULL, 17, NULL, NULL, NULL, 50114.53, 50114.53, 'jack_henry', NULL, NULL, '2025-10-11', '2025-10-11'),
+(920101, 910011, 4567.89, 'ACH', 'credit', 'posted', '2025-10-12', '2025-10-12', 'SQUARE INC SETTLEMENT', 'SQ101201', 'Square', NULL, 17, NULL, NULL, NULL, 54682.42, 54682.42, 'jack_henry', NULL, NULL, '2025-10-12', '2025-10-12'),
+-- Week 3-4 October
+(920102, 910011, 2956.42, 'ACH', 'credit', 'posted', '2025-10-14', '2025-10-14', 'SQUARE INC SETTLEMENT', 'SQ101401', 'Square', NULL, 17, NULL, NULL, NULL, 57638.84, 57638.84, 'jack_henry', NULL, NULL, '2025-10-14', '2025-10-14'),
+(920103, 910011, -1345.00, 'ACH', 'debit', 'posted', '2025-10-17', '2025-10-17', 'SYSCO FOODS VENDOR', 'ACH101701', 'Sysco', NULL, 14, NULL, NULL, NULL, 56293.84, 56293.84, 'jack_henry', NULL, NULL, '2025-10-17', '2025-10-17'),
+(920104, 910011, 3678.90, 'ACH', 'credit', 'posted', '2025-10-19', '2025-10-19', 'SQUARE INC SETTLEMENT', 'SQ101901', 'Square', NULL, 17, NULL, NULL, NULL, 59972.74, 59972.74, 'jack_henry', NULL, NULL, '2025-10-19', '2025-10-19'),
+(920105, 910011, -8542.50, 'ACH', 'debit', 'posted', '2025-10-25', '2025-10-25', 'PAYROLL - 5 EMPLOYEES', 'PAY102501', 'ADP Payroll', NULL, 17, NULL, NULL, NULL, 51430.24, 51430.24, 'jack_henry', NULL, NULL, '2025-10-25', '2025-10-25'),
+(920106, 910011, -1087.00, 'ACH', 'debit', 'posted', '2025-10-24', '2025-10-24', 'SYSCO FOODS VENDOR', 'ACH102401', 'Sysco', NULL, 14, NULL, NULL, NULL, 50343.24, 50343.24, 'jack_henry', NULL, NULL, '2025-10-24', '2025-10-24'),
+(920107, 910011, 4234.56, 'ACH', 'credit', 'posted', '2025-10-26', '2025-10-26', 'SQUARE INC SETTLEMENT', 'SQ102601', 'Square', NULL, 17, NULL, NULL, NULL, 54577.80, 54577.80, 'jack_henry', NULL, NULL, '2025-10-26', '2025-10-26'),
+-- November 2025
+(920108, 910011, 2978.45, 'ACH', 'credit', 'posted', '2025-11-01', '2025-11-01', 'SQUARE INC SETTLEMENT', 'SQ110101', 'Square', NULL, 17, NULL, NULL, NULL, 57556.25, 57556.25, 'jack_henry', NULL, NULL, '2025-11-01', '2025-11-01'),
+(920109, 910011, -5000.00, 'XFR', 'debit', 'posted', '2025-11-01', '2025-11-01', 'OWNER DISTRIBUTION', 'XFR110101', NULL, NULL, 5, NULL, 910009, NULL, 52556.25, 52556.25, 'jack_henry', NULL, NULL, '2025-11-01', '2025-11-01'),
+(920110, 910011, -4500.00, 'ACH', 'debit', 'posted', '2025-11-01', '2025-11-01', 'RENT PMT BELMONT PROP', 'ACH110101', 'Belmont Properties', NULL, 11, NULL, NULL, NULL, 48056.25, 48056.25, 'jack_henry', NULL, NULL, '2025-11-01', '2025-11-01'),
+(920111, 910011, 3456.78, 'ACH', 'credit', 'posted', '2025-11-03', '2025-11-03', 'SQUARE INC SETTLEMENT', 'SQ110301', 'Square', NULL, 17, NULL, NULL, NULL, 51513.03, 51513.03, 'jack_henry', NULL, NULL, '2025-11-03', '2025-11-03'),
+(920112, 910011, -1198.50, 'ACH', 'debit', 'posted', '2025-11-05', '2025-11-05', 'SYSCO FOODS VENDOR', 'ACH110501', 'Sysco', NULL, 14, NULL, NULL, NULL, 50314.53, 50314.53, 'jack_henry', NULL, NULL, '2025-11-05', '2025-11-05'),
+(920113, 910011, 4125.00, 'ACH', 'credit', 'posted', '2025-11-08', '2025-11-08', 'SQUARE INC SETTLEMENT', 'SQ110801', 'Square', NULL, 17, NULL, NULL, NULL, 54439.53, 54439.53, 'jack_henry', NULL, NULL, '2025-11-08', '2025-11-08'),
+(920114, 910011, -8542.50, 'ACH', 'debit', 'posted', '2025-11-10', '2025-11-10', 'PAYROLL - 5 EMPLOYEES', 'PAY111001', 'ADP Payroll', NULL, 17, NULL, NULL, NULL, 45897.03, 45897.03, 'jack_henry', NULL, NULL, '2025-11-10', '2025-11-10'),
+(920115, 910011, 3789.45, 'ACH', 'credit', 'posted', '2025-11-15', '2025-11-15', 'SQUARE INC SETTLEMENT', 'SQ111501', 'Square', NULL, 17, NULL, NULL, NULL, 49686.48, 49686.48, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920116, 910011, -1245.00, 'ACH', 'debit', 'posted', '2025-11-17', '2025-11-17', 'SYSCO FOODS VENDOR', 'ACH111701', 'Sysco', NULL, 14, NULL, NULL, NULL, 48441.48, 48441.48, 'jack_henry', NULL, NULL, '2025-11-17', '2025-11-17'),
+(920117, 910011, 4567.00, 'ACH', 'credit', 'posted', '2025-11-22', '2025-11-22', 'SQUARE INC SETTLEMENT', 'SQ112201', 'Square', NULL, 17, NULL, NULL, NULL, 53008.48, 53008.48, 'jack_henry', NULL, NULL, '2025-11-22', '2025-11-22'),
+(920118, 910011, -8542.50, 'ACH', 'debit', 'posted', '2025-11-25', '2025-11-25', 'PAYROLL - 5 EMPLOYEES', 'PAY112501', 'ADP Payroll', NULL, 17, NULL, NULL, NULL, 44465.98, 44465.98, 'jack_henry', NULL, NULL, '2025-11-25', '2025-11-25'),
+(920119, 910011, 5234.00, 'ACH', 'credit', 'posted', '2025-11-29', '2025-11-29', 'SQUARE INC SETTLEMENT', 'SQ112901', 'Square', NULL, 17, NULL, NULL, NULL, 49699.98, 49699.98, 'jack_henry', NULL, NULL, '2025-11-29', '2025-11-29'),
+-- December 2025
+(920120, 910011, 3245.67, 'ACH', 'credit', 'posted', '2025-12-01', '2025-12-01', 'SQUARE INC SETTLEMENT', 'SQ120101', 'Square', NULL, 17, NULL, NULL, NULL, 52945.65, 52945.65, 'jack_henry', NULL, NULL, '2025-12-01', '2025-12-01'),
+(920121, 910011, -5000.00, 'XFR', 'debit', 'posted', '2025-12-01', '2025-12-01', 'OWNER DISTRIBUTION', 'XFR120101', NULL, NULL, 5, NULL, 910009, NULL, 47945.65, 47945.65, 'jack_henry', NULL, NULL, '2025-12-01', '2025-12-01'),
+(920122, 910011, -4500.00, 'ACH', 'debit', 'posted', '2025-12-01', '2025-12-01', 'RENT PMT BELMONT PROP', 'ACH120101', 'Belmont Properties', NULL, 11, NULL, NULL, NULL, 43445.65, 43445.65, 'jack_henry', NULL, NULL, '2025-12-01', '2025-12-01'),
+(920123, 910011, 4567.89, 'ACH', 'credit', 'posted', '2025-12-05', '2025-12-05', 'SQUARE INC SETTLEMENT', 'SQ120501', 'Square', NULL, 17, NULL, NULL, NULL, 48013.54, 48013.54, 'jack_henry', NULL, NULL, '2025-12-05', '2025-12-05'),
+(920124, 910011, -1378.00, 'ACH', 'debit', 'posted', '2025-12-07', '2025-12-07', 'SYSCO FOODS VENDOR', 'ACH120701', 'Sysco', NULL, 14, NULL, NULL, NULL, 46635.54, 46635.54, 'jack_henry', NULL, NULL, '2025-12-07', '2025-12-07'),
+(920125, 910011, -8542.50, 'ACH', 'debit', 'posted', '2025-12-10', '2025-12-10', 'PAYROLL - 5 EMPLOYEES', 'PAY121001', 'ADP Payroll', NULL, 17, NULL, NULL, NULL, 38093.04, 38093.04, 'jack_henry', NULL, NULL, '2025-12-10', '2025-12-10'),
+(920126, 910011, 5678.90, 'ACH', 'credit', 'posted', '2025-12-14', '2025-12-14', 'SQUARE INC SETTLEMENT', 'SQ121401', 'Square', NULL, 17, NULL, NULL, NULL, 43771.94, 43771.94, 'jack_henry', NULL, NULL, '2025-12-14', '2025-12-14'),
+(920127, 910011, -1245.00, 'ACH', 'debit', 'posted', '2025-12-16', '2025-12-16', 'SYSCO FOODS VENDOR', 'ACH121601', 'Sysco', NULL, 14, NULL, NULL, NULL, 42526.94, 42526.94, 'jack_henry', NULL, NULL, '2025-12-16', '2025-12-16'),
+(920128, 910011, 6234.56, 'ACH', 'credit', 'posted', '2025-12-21', '2025-12-21', 'SQUARE INC SETTLEMENT', 'SQ122101', 'Square', NULL, 17, NULL, NULL, NULL, 48761.50, 48761.50, 'jack_henry', NULL, NULL, '2025-12-21', '2025-12-21'),
+(920129, 910011, 7890.12, 'ACH', 'credit', 'posted', '2025-12-24', '2025-12-24', 'SQUARE INC SETTLEMENT', 'SQ122401', 'Square', NULL, 17, NULL, NULL, NULL, 56651.62, 56651.62, 'jack_henry', NULL, NULL, '2025-12-24', '2025-12-24'),
+(920130, 910011, -8542.50, 'ACH', 'debit', 'posted', '2025-12-25', '2025-12-25', 'PAYROLL - 5 EMPLOYEES', 'PAY122501', 'ADP Payroll', NULL, 17, NULL, NULL, NULL, 48109.12, 48109.12, 'jack_henry', NULL, NULL, '2025-12-25', '2025-12-25'),
+(920131, 910011, 5456.78, 'ACH', 'credit', 'posted', '2025-12-28', '2025-12-28', 'SQUARE INC SETTLEMENT', 'SQ122801', 'Square', NULL, 17, NULL, NULL, NULL, 53565.90, 53565.90, 'jack_henry', NULL, NULL, '2025-12-28', '2025-12-28'),
+(920132, 910011, 4789.00, 'ACH', 'credit', 'posted', '2025-12-31', '2025-12-31', 'SQUARE INC SETTLEMENT', 'SQ123101', 'Square', NULL, 17, NULL, NULL, NULL, 58354.90, 58354.90, 'jack_henry', NULL, NULL, '2025-12-31', '2025-12-31');
+GO
+
+-- Business Credit Card (910013) - Vendor/supply purchases
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+(920133, 910013, 1245.00, 'PUR', 'debit', 'posted', '2025-10-05', '2025-10-05', 'RESTAURANT DEPOT', 'PUR100513', 'Restaurant Depot', '5812', 14, NULL, NULL, NULL, 5245.00, 44755.00, 'jack_henry', NULL, NULL, '2025-10-05', '2025-10-05'),
+(920134, 910013, -3000.00, 'PMT', 'credit', 'posted', '2025-10-15', '2025-10-15', 'PAYMENT THANK YOU', 'PMT101513', NULL, NULL, 16, NULL, 910011, NULL, 2245.00, 47755.00, 'jack_henry', NULL, NULL, '2025-10-15', '2025-10-15'),
+(920135, 910013, 856.42, 'PUR', 'debit', 'posted', '2025-10-22', '2025-10-22', 'US FOODS INC', 'PUR102213', 'US Foods', '5812', 14, NULL, NULL, NULL, 3101.42, 46898.58, 'jack_henry', NULL, NULL, '2025-10-22', '2025-10-22'),
+(920136, 910013, 1478.00, 'PUR', 'debit', 'posted', '2025-11-03', '2025-11-03', 'RESTAURANT DEPOT', 'PUR110313', 'Restaurant Depot', '5812', 14, NULL, NULL, NULL, 4579.42, 45420.58, 'jack_henry', NULL, NULL, '2025-11-03', '2025-11-03'),
+(920137, 910013, -3000.00, 'PMT', 'credit', 'posted', '2025-11-15', '2025-11-15', 'PAYMENT THANK YOU', 'PMT111513', NULL, NULL, 16, NULL, 910011, NULL, 1579.42, 48420.58, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920138, 910013, 1234.56, 'PUR', 'debit', 'posted', '2025-11-25', '2025-11-25', 'WEBSTAURANT STORE', 'PUR112513', 'WebstaurantStore', '5812', 14, NULL, NULL, NULL, 2813.98, 47186.02, 'jack_henry', NULL, NULL, '2025-11-25', '2025-11-25'),
+(920139, 910013, 1567.89, 'PUR', 'debit', 'posted', '2025-12-05', '2025-12-05', 'RESTAURANT DEPOT', 'PUR120513', 'Restaurant Depot', '5812', 14, NULL, NULL, NULL, 4381.87, 45618.13, 'jack_henry', NULL, NULL, '2025-12-05', '2025-12-05'),
+(920140, 910013, -3000.00, 'PMT', 'credit', 'posted', '2025-12-15', '2025-12-15', 'PAYMENT THANK YOU', 'PMT121513', NULL, NULL, 16, NULL, 910011, NULL, 1381.87, 48618.13, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920141, 910013, 2345.67, 'PUR', 'debit', 'posted', '2025-12-22', '2025-12-22', 'US FOODS INC', 'PUR122213', 'US Foods', '5812', 14, NULL, NULL, NULL, 3727.54, 46272.46, 'jack_henry', NULL, NULL, '2025-12-22', '2025-12-22');
+GO
+
+-- ============================================================================
+-- ETHAN CHEN - Account 910014 (Checking) - Light activity (new customer)
+-- ============================================================================
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+(920142, 910014, 2000.00, 'DEP', 'credit', 'posted', '2025-10-05', '2025-10-05', 'OPENING DEPOSIT', 'DEP100514', NULL, NULL, 7, NULL, NULL, NULL, 2000.00, 2000.00, 'jack_henry', NULL, NULL, '2025-10-05', '2025-10-05'),
+(920143, 910014, -45.87, 'POS', 'debit', 'posted', '2025-10-10', '2025-10-10', 'CHIPOTLE #3456', 'POS101014', 'Chipotle', '5814', 4, NULL, NULL, NULL, 1954.13, 1954.13, 'jack_henry', NULL, NULL, '2025-10-10', '2025-10-10'),
+(920144, 910014, -28.50, 'POS', 'debit', 'posted', '2025-10-18', '2025-10-18', 'AMAZON.COM*XY1234', 'POS101814', 'Amazon', '5999', 3, NULL, NULL, NULL, 1925.63, 1925.63, 'jack_henry', NULL, NULL, '2025-10-18', '2025-10-18'),
+(920145, 910014, -60.00, 'ATM', 'debit', 'posted', '2025-10-25', '2025-10-25', 'ATM WITHDRAWAL CLIENTIQ', 'ATM102514', NULL, NULL, 10, NULL, NULL, NULL, 1865.63, 1865.63, 'jack_henry', NULL, NULL, '2025-10-25', '2025-10-25'),
+(920146, 910014, 500.00, 'XFR', 'credit', 'posted', '2025-11-01', '2025-11-01', 'ZELLE FROM CHEN DAVID', 'ZEL110114', NULL, NULL, 5, NULL, NULL, NULL, 2365.63, 2365.63, 'jack_henry', NULL, NULL, '2025-11-01', '2025-11-01'),
+(920147, 910014, -32.45, 'POS', 'debit', 'posted', '2025-11-08', '2025-11-08', 'IN-N-OUT #234', 'POS110814', 'In-N-Out', '5814', 4, NULL, NULL, NULL, 2333.18, 2333.18, 'jack_henry', NULL, NULL, '2025-11-08', '2025-11-08'),
+(920148, 910014, -89.99, 'ACH', 'debit', 'posted', '2025-11-15', '2025-11-15', 'SPOTIFY USA', 'ACH111514', 'Spotify', NULL, 2, NULL, NULL, NULL, 2243.19, 2243.19, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920149, 910014, -100.00, 'ATM', 'debit', 'posted', '2025-11-22', '2025-11-22', 'ATM WITHDRAWAL CLIENTIQ', 'ATM112214', NULL, NULL, 10, NULL, NULL, NULL, 2143.19, 2143.19, 'jack_henry', NULL, NULL, '2025-11-22', '2025-11-22'),
+(920150, 910014, 500.00, 'XFR', 'credit', 'posted', '2025-12-01', '2025-12-01', 'ZELLE FROM CHEN DAVID', 'ZEL120114', NULL, NULL, 5, NULL, NULL, NULL, 2643.19, 2643.19, 'jack_henry', NULL, NULL, '2025-12-01', '2025-12-01'),
+(920151, 910014, -56.42, 'POS', 'debit', 'posted', '2025-12-10', '2025-12-10', 'TARGET T-2145', 'POS121014', 'Target', '5311', 3, NULL, NULL, NULL, 2586.77, 2586.77, 'jack_henry', NULL, NULL, '2025-12-10', '2025-12-10'),
+(920152, 910014, -89.99, 'ACH', 'debit', 'posted', '2025-12-15', '2025-12-15', 'SPOTIFY USA', 'ACH121514', 'Spotify', NULL, 2, NULL, NULL, NULL, 2496.78, 2496.78, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920153, 910014, -120.00, 'ATM', 'debit', 'posted', '2025-12-20', '2025-12-20', 'ATM WITHDRAWAL CLIENTIQ', 'ATM122014', NULL, NULL, 10, NULL, NULL, NULL, 2376.78, 2376.78, 'jack_henry', NULL, NULL, '2025-12-20', '2025-12-20'),
+(920154, 910014, -45.00, 'POS', 'debit', 'posted', '2025-12-28', '2025-12-28', 'UBER EATS', 'POS122814', 'Uber Eats', '5814', 4, NULL, NULL, NULL, 2331.78, 2331.78, 'jack_henry', NULL, NULL, '2025-12-28', '2025-12-28');
+GO
+
+-- Ethan Credit Card (910015) - Minimal usage
+INSERT INTO financial_transaction (transaction_id, account_id, amount, transaction_code, transaction_type, status, transaction_date, posting_date, description, reference_number, merchant_name, merchant_category_code, category_id, transfer_group_id, counterparty_account_id, related_transaction_id, ledger_balance_after, available_balance_after, source_system, source_transaction_id, raw_payload, created_at, updated_at) VALUES 
+(920155, 910015, 125.00, 'PUR', 'debit', 'posted', '2025-10-15', '2025-10-15', 'BEST BUY 00512', 'PUR101515', 'Best Buy', '5732', 3, NULL, NULL, NULL, 125.00, 1875.00, 'jack_henry', NULL, NULL, '2025-10-15', '2025-10-15'),
+(920156, 910015, 45.67, 'PUR', 'debit', 'posted', '2025-10-28', '2025-10-28', 'AMAZON.COM*AB1234', 'PUR102815', 'Amazon', '5999', 3, NULL, NULL, NULL, 170.67, 1829.33, 'jack_henry', NULL, NULL, '2025-10-28', '2025-10-28'),
+(920157, 910015, -100.00, 'PMT', 'credit', 'posted', '2025-11-15', '2025-11-15', 'PAYMENT THANK YOU', 'PMT111515', NULL, NULL, 16, NULL, 910014, NULL, 70.67, 1929.33, 'jack_henry', NULL, NULL, '2025-11-15', '2025-11-15'),
+(920158, 910015, 85.42, 'PUR', 'debit', 'posted', '2025-11-25', '2025-11-25', 'STEAM GAMES', 'PUR112515', 'Steam', '5816', 3, NULL, NULL, NULL, 156.09, 1843.91, 'jack_henry', NULL, NULL, '2025-11-25', '2025-11-25'),
+(920159, 910015, -100.00, 'PMT', 'credit', 'posted', '2025-12-15', '2025-12-15', 'PAYMENT THANK YOU', 'PMT121515', NULL, NULL, 16, NULL, 910014, NULL, 56.09, 1943.91, 'jack_henry', NULL, NULL, '2025-12-15', '2025-12-15'),
+(920160, 910015, 69.09, 'PUR', 'debit', 'posted', '2025-12-20', '2025-12-20', 'GAMESTOP #4521', 'PUR122015', 'GameStop', '5945', 3, NULL, NULL, NULL, 125.18, 1874.82, 'jack_henry', NULL, NULL, '2025-12-20', '2025-12-20');
+GO
+
+SET IDENTITY_INSERT financial_transaction OFF;
+GO
+PRINT '  Imported: financial_transaction (160 rows)';
+GO
+
+-- ============================================================================
+-- PHASE 16: RESEED IDENTITY COLUMNS
+-- ============================================================================
+PRINT 'Reseeding identity columns...';
+GO
+DBCC CHECKIDENT ('branch', RESEED, 927);
+DBCC CHECKIDENT ('address', RESEED, 900008);
+DBCC CHECKIDENT ('contact_info', RESEED, 900014);
+DBCC CHECKIDENT ('customer', RESEED, 900007);
+DBCC CHECKIDENT ('household', RESEED, 900003);
+DBCC CHECKIDENT ('household_membership', RESEED, 900006);
+DBCC CHECKIDENT ('entity_address', RESEED, 900008);
+DBCC CHECKIDENT ('entity_contact', RESEED, 900014);
+DBCC CHECKIDENT ('account', RESEED, 910015);
+DBCC CHECKIDENT ('account_ownership', RESEED, 910019);
+DBCC CHECKIDENT ('online_banking_user', RESEED, 900004);
+DBCC CHECKIDENT ('debit_card_limit_profile', RESEED, 900003);
+DBCC CHECKIDENT ('debit_card', RESEED, 900005);
+DBCC CHECKIDENT ('note', RESEED, 900001);
+DBCC CHECKIDENT ('financial_transaction', RESEED, 920160);
+GO
+
+PRINT '';
+PRINT '==================================================================================';
+PRINT 'ClientIQ Banking Platform - Replacement Data Import Complete';
+PRINT '==================================================================================';
+PRINT '';
+PRINT 'Summary:';
+PRINT '  Branches:        27 real Southern California locations';
+PRINT '  Customers:       7 (6 individuals + 1 business entity)';
+PRINT '  Households:      3';
+PRINT '  Accounts:        15';
+PRINT '  Transactions:    160';
+PRINT '';
+PRINT 'Personas:';
+PRINT '  - Emily Sanders (Los Altos) - Marketing Manager, mortgage, bi-weekly payroll';
+PRINT '  - David Sanders (Los Altos) - Software Engineer, joint mortgage';
+PRINT '  - Maria Rodriguez (East Long Beach) - RN, 6-month CD, multi-gen household';
+PRINT '  - Isabel Rodriguez (East Long Beach) - Retired, mother of Maria';
+PRINT '  - Jason Nguyen (Belmont Shore) - VIP, cafe owner, personal + business banking';
+PRINT '  - Nguyen Coastal Cafe LLC - Business entity with merchant settlements';
+PRINT '  - Ethan Chen (Main Office) - New customer, KYC pending, grad student';
+PRINT '';
+PRINT 'Date Range: October 1 - December 31, 2025';
+PRINT '==================================================================================';
+GO
